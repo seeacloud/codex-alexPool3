@@ -35,5 +35,31 @@ namespace PoolAimTrainer.Tests.EditMode
             Assert.That(center.x, Is.EqualTo(-2f * R * inv).Within(1e-5f));
             Assert.That(center.z, Is.EqualTo(-2f * R * inv).Within(1e-5f));
         }
+
+        [Test]
+        public void CutAngle_StraightShot_IsZeroDegrees()
+        {
+            var cue = new Vector3(0f, 0f, 0f);
+            var obj = new Vector3(1f, 0f, 0f);
+            var pocket = new Vector3(2f, 0f, 0f);
+
+            float angle = AimSolver.ComputeCutAngle(cue, obj, pocket, R);
+
+            Assert.That(angle, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void CutAngle_HalfBallHit_IsThirtyDegrees()
+        {
+            var obj = new Vector3(0f, 0f, 0f);
+            var pocket = new Vector3(0f, 0f, 1f);
+            var ghostCenter = AimSolver.ComputeGhostBallCenter(obj, pocket, R);
+            var backDir = new Vector3(Mathf.Sin(30f * Mathf.Deg2Rad), 0f, -Mathf.Cos(30f * Mathf.Deg2Rad));
+            var cue = ghostCenter + backDir * 0.5f;
+
+            float angle = AimSolver.ComputeCutAngle(cue, obj, pocket, R);
+
+            Assert.That(angle, Is.EqualTo(30f).Within(0.05f));
+        }
     }
 }
