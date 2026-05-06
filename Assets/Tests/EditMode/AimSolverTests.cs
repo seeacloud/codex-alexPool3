@@ -61,5 +61,35 @@ namespace PoolAimTrainer.Tests.EditMode
 
             Assert.That(angle, Is.EqualTo(30f).Within(0.05f));
         }
+
+        [Test]
+        public void Compute_StraightShot_ReturnsSolvableResult()
+        {
+            var cue = new Vector3(0f, 0f, 0f);
+            var obj = new Vector3(1f, 0f, 0f);
+            var pocket = new Vector3(2f, 0f, 0f);
+
+            var r = AimSolver.Compute(cue, obj, pocket, R);
+
+            Assert.That(r.solvable, Is.True);
+            Assert.That(r.cutAngleDegrees, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(r.ghostBallCenter.x, Is.EqualTo(1f - 2f * R).Within(1e-5f));
+            Assert.That(r.aimLineStart, Is.EqualTo(cue));
+            Assert.That(r.aimLineEnd, Is.EqualTo(r.ghostBallCenter));
+            Assert.That(r.objectBallToPocketStart, Is.EqualTo(obj));
+            Assert.That(r.objectBallToPocketEnd, Is.EqualTo(pocket));
+        }
+
+        [Test]
+        public void Compute_CueBallOnPocketSideOfObject_ReturnsUnsolvable()
+        {
+            var cue = new Vector3(3f, 0f, 0f);
+            var obj = new Vector3(1f, 0f, 0f);
+            var pocket = new Vector3(2f, 0f, 0f);
+
+            var r = AimSolver.Compute(cue, obj, pocket, R);
+
+            Assert.That(r.solvable, Is.False);
+        }
     }
 }
