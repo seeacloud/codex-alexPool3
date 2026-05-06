@@ -15,9 +15,19 @@ namespace PoolAimTrainer.SceneObjects
         [Tooltip("袋口编号（1~6），用于 UI 引用；0 表示不显示")]
         public int pocketNumber = 0;
         [Tooltip("编号标签相对球心的向上偏移（米）")]
-        public float labelHeight = 0.12f;
-        [Tooltip("编号标签字号（世界空间，米）")]
-        public float labelFontSize = 0.08f;
+        public float labelHeight = 0.08f;
+
+        public static bool LabelsVisible = true;
+
+        public static void SetLabelsVisible(bool visible)
+        {
+            LabelsVisible = visible;
+            foreach (var pm in FindObjectsOfType<PocketMarker>())
+            {
+                var labelT = pm.transform.Find("Label");
+                if (labelT != null) labelT.gameObject.SetActive(visible);
+            }
+        }
 
         Renderer indicatorRenderer;
         TextMeshPro labelText;
@@ -80,17 +90,20 @@ namespace PoolAimTrainer.SceneObjects
             {
                 labelGO = new GameObject("Label");
                 labelGO.transform.SetParent(transform, false);
-                labelGO.transform.localPosition = new Vector3(0f, labelHeight, 0f);
             }
+            // Position the label above the pocket and size it to render as a small 3D tag.
+            labelGO.transform.localPosition = new Vector3(0f, labelHeight, 0f);
+            labelGO.transform.localScale = Vector3.one * 0.015f;
+            labelGO.SetActive(LabelsVisible);
             labelText = labelGO.GetComponent<TextMeshPro>();
             if (labelText == null) labelText = labelGO.AddComponent<TextMeshPro>();
             labelText.text = pocketNumber.ToString();
-            labelText.fontSize = labelFontSize * 40f;
+            labelText.fontSize = 4f;
             labelText.alignment = TextAlignmentOptions.Center;
             labelText.color = Color.white;
             labelText.enableWordWrapping = false;
             var rect = labelText.rectTransform;
-            rect.sizeDelta = new Vector2(0.2f, 0.15f);
+            rect.sizeDelta = new Vector2(4f, 2f);
         }
 
         public void SetHighlighted(bool on)
