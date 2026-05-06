@@ -30,6 +30,24 @@ namespace PoolAimTrainer.Core
         [Tooltip("用户手动选择的袋口；非 null 时优先使用它而非自动推荐")]
         public PocketMarker userSelectedPocket;
 
+        [Tooltip("用户手动设置的击打方向（来自 HUD 点击）；非零时覆盖自动瞄准方向")]
+        public Vector3 manualAimDir;
+        public bool hasManualAim;
+
+        public void SetManualAimDir(Vector3 dir)
+        {
+            manualAimDir = dir.normalized;
+            hasManualAim = true;
+            simDirty = true;
+        }
+
+        public void ClearManualAim()
+        {
+            hasManualAim = false;
+            manualAimDir = Vector3.zero;
+            simDirty = true;
+        }
+
         Vector3 lastCue, lastTarget, lastPocket;
         PocketMarker lastForcedPocketSource;
         PocketMarker lastHighlighted;
@@ -50,6 +68,8 @@ namespace PoolAimTrainer.Core
         {
             if (cueBall == null || targetBall == null || table == null) return;
             if (table.Pockets.Count == 0) return;
+
+            Update_HandleManualAimReset();
 
             PocketMarker desired = userSelectedPocket != null
                 ? userSelectedPocket
@@ -77,23 +97,33 @@ namespace PoolAimTrainer.Core
         void TriggerSim()
         {
             if (shotSimulator == null || endRenderer == null) return;
-            if (currentPocket == null)
+
+            Vector3 aimDir;
+            if (hasManualAim && manualAimDir.sqrMagnitude > 1e-6f)
+            {
+                aimDir = manualAimDir.normalized;
+            }
+            else if (currentPocket != null)
+            {
+                var r = AimSolver.Compute(cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius);
+                if (!r.solvable)
+                {
+                    endRenderer.Hide();
+                    if (pathRenderer != null) pathRenderer.Hide();
+                    if (cuePathRenderer != null) cuePathRenderer.Hide();
+                    return;
+                }
+                aimDir = (r.ghostBallCenter - cueBall.Center).normalized;
+            }
+            else
             {
                 endRenderer.Hide();
                 if (pathRenderer != null) pathRenderer.Hide();
                 if (cuePathRenderer != null) cuePathRenderer.Hide();
                 return;
             }
-            var r = AimSolver.Compute(cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius);
-            if (!r.solvable)
-            {
-                endRenderer.Hide();
-                if (pathRenderer != null) pathRenderer.Hide();
-                if (cuePathRenderer != null) cuePathRenderer.Hide();
-                return;
-            }
-            Vector3 aimDir = (r.ghostBallCenter - cueBall.Center).normalized;
-            var sim = shotSimulator.Run(cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius, table);
+
+            var sim = shotSimulator.Run(cueBall.Center, targetBall.Center, aimDir, table.ballRadius, table);
             endRenderer.Show(sim);
             if (pathRenderer != null)
             {
@@ -101,6 +131,14 @@ namespace PoolAimTrainer.Core
                 else pathRenderer.Show(sim.targetBallTrajectory);
             }
             if (cuePathRenderer != null) cuePathRenderer.Show(sim.cueBallTrajectory);
+        }
+
+        void Update_HandleManualAimReset()
+        {
+            if (Input.GetKeyDown(KeyCode.G))
+            {
+                ClearManualAim();
+            }
         }
 
         void UpdatePocketHighlight()
