@@ -19,6 +19,7 @@ namespace PoolAimTrainer.Core
         [Header("E1: Target ball final-position ghost")]
         public ShotSimulator shotSimulator;
         public TargetBallEndRenderer endRenderer;
+        public TargetBallPathRenderer pathRenderer;
         [Tooltip("两次隐藏场景仿真之间最小间隔（秒）")]
         public float simThrottleSeconds = 0.05f;
 
@@ -75,12 +76,17 @@ namespace PoolAimTrainer.Core
         void TriggerSim()
         {
             if (shotSimulator == null || endRenderer == null) return;
-            if (currentPocket == null) { endRenderer.Hide(); return; }
+            if (currentPocket == null) { endRenderer.Hide(); if (pathRenderer != null) pathRenderer.Hide(); return; }
             var r = AimSolver.Compute(cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius);
-            if (!r.solvable) { endRenderer.Hide(); return; }
+            if (!r.solvable) { endRenderer.Hide(); if (pathRenderer != null) pathRenderer.Hide(); return; }
             Vector3 aimDir = (r.ghostBallCenter - cueBall.Center).normalized;
             var sim = shotSimulator.Run(cueBall.Center, targetBall.Center, aimDir, table.ballRadius, table);
             endRenderer.Show(sim);
+            if (pathRenderer != null)
+            {
+                if (sim.state == TargetBallEndState.NotHit) pathRenderer.Hide();
+                else pathRenderer.Show(sim.targetBallTrajectory);
+            }
         }
 
         void UpdatePocketHighlight()
