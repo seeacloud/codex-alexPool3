@@ -2,7 +2,8 @@
     "name": "PoolAimTrainer.Editor",
     "rootNamespace": "PoolAimTrainer.EditorTools",
     "references": [
-        "PoolAimTrainer.Runtime"
+        "PoolAimTrainer.Runtime",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
