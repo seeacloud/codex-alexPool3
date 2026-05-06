@@ -1,4 +1,5 @@
 using UnityEngine;
+using PoolAimTrainer.Core;
 using PoolAimTrainer.SceneObjects;
 
 namespace PoolAimTrainer.Interaction
@@ -8,6 +9,10 @@ namespace PoolAimTrainer.Interaction
         public Camera cam;
         public LayerMask ballLayer = ~0;
         public float pickRadius = 0.05f;
+        [Tooltip("点击袋口的吸附半径（米）")]
+        public float pocketPickRadius = 0.1f;
+        [Tooltip("可选：如果设置，点击袋口会写入 aimManager.userSelectedPocket")]
+        public AimManager aimManager;
 
         BallController dragging;
         Plane tablePlane;
@@ -27,6 +32,12 @@ namespace PoolAimTrainer.Interaction
                 {
                     Vector3 hit = r.GetPoint(t);
                     dragging = FindClosestBall(hit);
+                    if (dragging == null)
+                    {
+                        var pocket = FindClosestPocket(hit);
+                        if (pocket != null && aimManager != null)
+                            aimManager.SetUserPocket(pocket);
+                    }
                 }
             }
             else if (InputRouter.PrimaryHeld && dragging != null)
@@ -52,6 +63,19 @@ namespace PoolAimTrainer.Interaction
             {
                 float d = Vector3.Distance(b.Center, hit);
                 if (d < bestDist) { bestDist = d; best = b; }
+            }
+            return best;
+        }
+
+        PocketMarker FindClosestPocket(Vector3 hit)
+        {
+            var pockets = FindObjectsOfType<PocketMarker>();
+            PocketMarker best = null;
+            float bestDist = pocketPickRadius;
+            foreach (var p in pockets)
+            {
+                float d = Vector3.Distance(p.Position, hit);
+                if (d < bestDist) { bestDist = d; best = p; }
             }
             return best;
         }

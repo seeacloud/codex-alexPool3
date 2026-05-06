@@ -15,22 +15,53 @@ namespace PoolAimTrainer.Core
         public AimLineRenderer aimLineRenderer;
         public HintPanel hintPanel;
 
-        [Tooltip("当前选中的袋口（MVP 阶段由外部/脚本指定）")]
+        [Tooltip("当前选中的袋口（自动选择或手动点选）")]
         public PocketMarker currentPocket;
 
+        [Tooltip("用户手动选择的袋口；非 null 时优先使用它而非自动推荐")]
+        public PocketMarker userSelectedPocket;
+
         Vector3 lastCue, lastTarget, lastPocket;
+        PocketMarker lastForcedPocketSource;
+        PocketMarker lastHighlighted;
+
+        public void SetUserPocket(PocketMarker pocket)
+        {
+            userSelectedPocket = pocket;
+        }
+
+        public void ClearUserPocket()
+        {
+            userSelectedPocket = null;
+        }
 
         void Update()
         {
             if (cueBall == null || targetBall == null || table == null) return;
             if (table.Pockets.Count == 0) return;
 
-            if (ChangedSinceLast())
+            PocketMarker desired = userSelectedPocket != null
+                ? userSelectedPocket
+                : (SelectBestSolvablePocket() ?? SelectClosestPocket());
+
+            bool pocketChanged = currentPocket != desired;
+            currentPocket = desired;
+
+            if (ChangedSinceLast() || pocketChanged)
             {
-                currentPocket = SelectBestSolvablePocket() ?? SelectClosestPocket();
+                UpdatePocketHighlight();
                 Recompute();
                 RememberPositions();
             }
+        }
+
+        void UpdatePocketHighlight()
+        {
+            if (lastHighlighted != null && lastHighlighted != currentPocket)
+                lastHighlighted.SetHighlighted(false);
+            if (currentPocket != null)
+                currentPocket.SetHighlighted(true);
+            lastHighlighted = currentPocket;
         }
 
         PocketMarker SelectBestSolvablePocket()
