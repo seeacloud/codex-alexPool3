@@ -17,5 +17,6 @@ namespace PoolAimTrainer.Trajectory
         public Vector3 targetBallEndPos;
         public Vector3 pocketHitPos;
         public Vector3[] targetBallTrajectory;
+        public Vector3[] cueBallTrajectory;
     }
 }

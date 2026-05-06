@@ -50,6 +50,7 @@ namespace PoolAimTrainer.Trajectory
             rbTgt.angularVelocity = Vector3.zero;
 
             var traj = new List<Vector3>(256);
+            var cueTraj = new List<Vector3>(256);
             float elapsed = 0f;
             bool targetEverMoved = false;
             var result = new SimulationResult { state = TargetBallEndState.OnTable };
@@ -59,6 +60,7 @@ namespace PoolAimTrainer.Trajectory
                 hiddenScene.Step(simStep);
                 elapsed += simStep;
                 traj.Add(hiddenTarget.transform.position);
+                cueTraj.Add(hiddenCue.transform.position);
 
                 if (rbTgt.velocity.magnitude > stopThreshold) targetEverMoved = true;
 
@@ -72,6 +74,7 @@ namespace PoolAimTrainer.Trajectory
                             result.pocketHitPos = p.Position;
                             result.targetBallEndPos = p.Position;
                             result.targetBallTrajectory = traj.ToArray();
+                            result.cueBallTrajectory = cueTraj.ToArray();
                             return result;
                         }
                     }
@@ -87,6 +90,7 @@ namespace PoolAimTrainer.Trajectory
 
             result.targetBallEndPos = hiddenTarget.transform.position;
             result.targetBallTrajectory = traj.ToArray();
+            result.cueBallTrajectory = cueTraj.ToArray();
 
             if (!targetEverMoved) { result.state = TargetBallEndState.NotHit; return result; }
 
