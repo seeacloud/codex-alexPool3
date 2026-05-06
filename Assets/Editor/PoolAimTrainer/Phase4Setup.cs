@@ -53,12 +53,8 @@ namespace PoolAimTrainer.EditorTools
             var endPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(GhostEndPrefabPath);
             if (endPrefab == null) endPrefab = CreateGhostBallEndPrefab(endMat);
 
-            var hidden = gm.GetComponent<HiddenSceneManager>();
-            if (hidden == null) hidden = gm.AddComponent<HiddenSceneManager>();
-
             var sim = gm.GetComponent<ShotSimulator>();
             if (sim == null) sim = gm.AddComponent<ShotSimulator>();
-            sim.hiddenScene = hidden;
 
             var endRenderer = vis.GetComponent<TargetBallEndRenderer>();
             if (endRenderer == null) endRenderer = vis.AddComponent<TargetBallEndRenderer>();
