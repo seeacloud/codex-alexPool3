@@ -23,15 +23,28 @@ namespace PoolAimTrainer.Core
         void Update()
         {
             if (cueBall == null || targetBall == null || table == null) return;
-            if (currentPocket == null && table.Pockets.Count > 0)
-                currentPocket = SelectClosestPocket();
-            if (currentPocket == null) return;
+            if (table.Pockets.Count == 0) return;
 
             if (ChangedSinceLast())
             {
+                currentPocket = SelectBestSolvablePocket() ?? SelectClosestPocket();
                 Recompute();
                 RememberPositions();
             }
+        }
+
+        PocketMarker SelectBestSolvablePocket()
+        {
+            PocketMarker best = null;
+            float bestDist = float.MaxValue;
+            foreach (var p in table.Pockets)
+            {
+                var r = AimSolver.Compute(cueBall.Center, targetBall.Center, p.Position, table.ballRadius);
+                if (!r.solvable) continue;
+                float d = Vector3.Distance(targetBall.Center, p.Position);
+                if (d < bestDist) { bestDist = d; best = p; }
+            }
+            return best;
         }
 
         PocketMarker SelectClosestPocket()
@@ -62,6 +75,13 @@ namespace PoolAimTrainer.Core
 
         void Recompute()
         {
+            if (currentPocket == null)
+            {
+                if (ghostRenderer != null) ghostRenderer.Hide();
+                if (aimLineRenderer != null) aimLineRenderer.Hide();
+                if (hintPanel != null) hintPanel.Show("没有可用袋口");
+                return;
+            }
             var r = AimSolver.Compute(
                 cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius);
             if (!r.solvable)
