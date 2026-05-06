@@ -1,6 +1,7 @@
 using UnityEngine;
 using PoolAimTrainer.GeometryCore;
 using PoolAimTrainer.SceneObjects;
+using PoolAimTrainer.Trajectory;
 using PoolAimTrainer.Visualization;
 using PoolAimTrainer.UI;
 
@@ -15,6 +16,12 @@ namespace PoolAimTrainer.Core
         public AimLineRenderer aimLineRenderer;
         public HintPanel hintPanel;
 
+        [Header("E1: Target ball final-position ghost")]
+        public ShotSimulator shotSimulator;
+        public TargetBallEndRenderer endRenderer;
+        [Tooltip("两次隐藏场景仿真之间最小间隔（秒）")]
+        public float simThrottleSeconds = 0.05f;
+
         [Tooltip("当前选中的袋口（自动选择或手动点选）")]
         public PocketMarker currentPocket;
 
@@ -24,6 +31,8 @@ namespace PoolAimTrainer.Core
         Vector3 lastCue, lastTarget, lastPocket;
         PocketMarker lastForcedPocketSource;
         PocketMarker lastHighlighted;
+        bool simDirty;
+        float lastSimTime;
 
         public void SetUserPocket(PocketMarker pocket)
         {
@@ -52,7 +61,26 @@ namespace PoolAimTrainer.Core
                 UpdatePocketHighlight();
                 Recompute();
                 RememberPositions();
+                simDirty = true;
             }
+
+            if (simDirty && Time.unscaledTime - lastSimTime > simThrottleSeconds)
+            {
+                simDirty = false;
+                lastSimTime = Time.unscaledTime;
+                TriggerSim();
+            }
+        }
+
+        void TriggerSim()
+        {
+            if (shotSimulator == null || endRenderer == null) return;
+            if (currentPocket == null) { endRenderer.Hide(); return; }
+            var r = AimSolver.Compute(cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius);
+            if (!r.solvable) { endRenderer.Hide(); return; }
+            Vector3 aimDir = (r.ghostBallCenter - cueBall.Center).normalized;
+            var sim = shotSimulator.Run(cueBall.Center, targetBall.Center, aimDir, table.ballRadius, table);
+            endRenderer.Show(sim);
         }
 
         void UpdatePocketHighlight()
