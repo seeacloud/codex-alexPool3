@@ -1,0 +1,14 @@
+{
+    "name": "PoolAimTrainer.Runtime",
+    "rootNamespace": "PoolAimTrainer",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
