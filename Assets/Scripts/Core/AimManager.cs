@@ -93,7 +93,7 @@ namespace PoolAimTrainer.Core
                 return;
             }
             Vector3 aimDir = (r.ghostBallCenter - cueBall.Center).normalized;
-            var sim = shotSimulator.Run(cueBall.Center, targetBall.Center, aimDir, table.ballRadius, table);
+            var sim = shotSimulator.Run(cueBall.Center, targetBall.Center, currentPocket.Position, table.ballRadius, table);
             endRenderer.Show(sim);
             if (pathRenderer != null)
             {

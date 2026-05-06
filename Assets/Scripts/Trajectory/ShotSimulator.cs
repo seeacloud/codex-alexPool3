@@ -1,170 +1,128 @@
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using PoolAimTrainer.SceneObjects;
 
 namespace PoolAimTrainer.Trajectory
 {
     /// <summary>
-    /// Runs a fast, synchronous billiards simulation in a hidden physics scene, then
-    /// reports the object ball's final state (in pocket / against rail / on table /
-    /// still moving / not hit).
+    /// Pure-geometry shot predictor: assumes a perfect cut (aim hits the ghost ball
+    /// center exactly). The target ball's post-impact direction is the ideal
+    /// "target → pocket" vector, clipped at the first rail or pocket intersection
+    /// (no rail bounces). Cue ball path is the straight aim line to the contact
+    /// point, then a short perpendicular deflection.
     /// </summary>
     public class ShotSimulator : MonoBehaviour
     {
-        public HiddenSceneManager hiddenScene;
-
-        [Tooltip("默认击球速度 m/s（作用于主球）")]
-        public float defaultImpulse = 3f;
-
-        [Tooltip("仿真固定步长（秒）")]
-        public float simStep = 0.02f;
-
-        [Tooltip("最大仿真时长（秒）")]
-        public float maxSimSeconds = 3f;
-
-        [Tooltip("球速低于此值视为已停下 m/s")]
-        public float stopThreshold = 0.05f;
-
-        [Tooltip("目标球进入此半径则视为入袋 m")]
+        [Tooltip("袋口捕捉半径（米）——子球进入此半径视为入袋")]
         public float pocketCatchRadius = 0.07f;
 
-        GameObject hiddenCue, hiddenTarget;
-        TableController boundTable;
+        [Tooltip("主球撞击后的偏折显示长度（米），仅可视化用，不表示真实距离")]
+        public float cueAfterImpactDistance = 0.3f;
 
         public SimulationResult Run(
-            Vector3 cuePos, Vector3 targetPos, Vector3 aimDirection,
+            Vector3 cuePos, Vector3 targetPos, Vector3 pocketPos,
             float ballRadius, TableController table)
         {
-            if (hiddenScene == null) return new SimulationResult { state = TargetBallEndState.NotHit };
-            hiddenScene.EnsureCreated();
-            EnsureHiddenObjects(ballRadius, table);
+            var result = new SimulationResult();
 
-            hiddenCue.transform.position = cuePos;
-            hiddenTarget.transform.position = targetPos;
-            var rbCue = hiddenCue.GetComponent<Rigidbody>();
-            var rbTgt = hiddenTarget.GetComponent<Rigidbody>();
-            rbCue.velocity = aimDirection.normalized * defaultImpulse;
-            rbCue.angularVelocity = Vector3.zero;
-            rbTgt.velocity = Vector3.zero;
-            rbTgt.angularVelocity = Vector3.zero;
-
-            var traj = new List<Vector3>(256);
-            var cueTraj = new List<Vector3>(256);
-            float elapsed = 0f;
-            bool targetEverMoved = false;
-            var result = new SimulationResult { state = TargetBallEndState.OnTable };
-
-            while (elapsed < maxSimSeconds)
+            // Ideal direction the target ball will travel once hit at the ghost-ball contact point.
+            Vector3 targetDir = (pocketPos - targetPos);
+            if (targetDir.sqrMagnitude < 1e-8f)
             {
-                hiddenScene.Step(simStep);
-                elapsed += simStep;
-                traj.Add(hiddenTarget.transform.position);
-                cueTraj.Add(hiddenCue.transform.position);
+                result.state = TargetBallEndState.NotHit;
+                return result;
+            }
+            targetDir = targetDir.normalized;
 
-                if (rbTgt.velocity.magnitude > stopThreshold) targetEverMoved = true;
+            // Clip the target ball's straight path at the first rail or pocket it reaches.
+            float tRail = FirstRailHit(targetPos, targetDir, table, ballRadius);
+            int pocketIdx;
+            float tPocket = FirstPocketHit(targetPos, targetDir, table, pocketCatchRadius, out pocketIdx);
 
-                if (targetEverMoved)
-                {
-                    foreach (var p in table.Pockets)
-                    {
-                        if (Vector3.Distance(hiddenTarget.transform.position, p.Position) < pocketCatchRadius)
-                        {
-                            result.state = TargetBallEndState.InPocket;
-                            result.pocketHitPos = p.Position;
-                            result.targetBallEndPos = p.Position;
-                            result.targetBallTrajectory = traj.ToArray();
-                            result.cueBallTrajectory = cueTraj.ToArray();
-                            return result;
-                        }
-                    }
-                }
-
-                if (targetEverMoved
-                    && rbCue.velocity.magnitude < stopThreshold
-                    && rbTgt.velocity.magnitude < stopThreshold)
-                {
-                    break;
-                }
+            float t;
+            if (tPocket < tRail)
+            {
+                t = tPocket;
+                result.state = TargetBallEndState.InPocket;
+                result.pocketHitPos = table.Pockets[pocketIdx].Position;
+                result.targetBallEndPos = result.pocketHitPos;
+            }
+            else
+            {
+                t = tRail;
+                Vector3 endCenter = targetPos + targetDir * t;
+                endCenter.y = ballRadius;
+                result.state = TargetBallEndState.AgainstRail;
+                result.targetBallEndPos = endCenter;
             }
 
-            result.targetBallEndPos = hiddenTarget.transform.position;
-            result.targetBallTrajectory = traj.ToArray();
-            result.cueBallTrajectory = cueTraj.ToArray();
+            result.targetBallTrajectory = new[] { targetPos, result.targetBallEndPos };
 
-            if (!targetEverMoved) { result.state = TargetBallEndState.NotHit; return result; }
-
-            if (rbTgt.velocity.magnitude > stopThreshold && elapsed >= maxSimSeconds - simStep)
-                result.state = TargetBallEndState.StillMoving;
-            else if (IsAgainstRail(result.targetBallEndPos, table, ballRadius))
-                result.state = TargetBallEndState.AgainstRail;
+            // Cue ball geometric path: from cue to ghost contact point, then a perpendicular
+            // deflection segment. Deflection direction is aim minus its component along targetDir
+            // (classic elastic collision tangent rule).
+            Vector3 ghostPos = targetPos - targetDir * (2f * ballRadius);
+            Vector3 aimDir = (ghostPos - cuePos).normalized;
+            Vector3 cueAfterDir = aimDir - Vector3.Dot(aimDir, targetDir) * targetDir;
+            if (cueAfterDir.sqrMagnitude < 1e-8f)
+            {
+                result.cueBallTrajectory = new[] { cuePos, ghostPos };
+            }
             else
-                result.state = TargetBallEndState.OnTable;
+            {
+                cueAfterDir = cueAfterDir.normalized;
+                Vector3 cueEnd = ghostPos + cueAfterDir * cueAfterImpactDistance;
+                cueEnd.y = ballRadius;
+                result.cueBallTrajectory = new[] { cuePos, ghostPos, cueEnd };
+            }
 
             return result;
         }
 
-        bool IsAgainstRail(Vector3 pos, TableController table, float ballRadius)
+        // Distance (in meters along dir) to the first rail wall, treating the ball center
+        // boundary as (halfLength - ballRadius, halfWidth - ballRadius). Returns a large
+        // finite value if the direction never hits a rail (should not happen with normalized dir).
+        static float FirstRailHit(Vector3 start, Vector3 dir, TableController table, float ballRadius)
         {
-            float eps = 0.02f;
-            return Mathf.Abs(Mathf.Abs(pos.x) - (table.playfieldHalfLength - ballRadius)) < eps
-                || Mathf.Abs(Mathf.Abs(pos.z) - (table.playfieldHalfWidth - ballRadius)) < eps;
+            float maxX = table.playfieldHalfLength - ballRadius;
+            float maxZ = table.playfieldHalfWidth - ballRadius;
+            float tBest = float.MaxValue;
+            if (Mathf.Abs(dir.x) > 1e-6f)
+            {
+                float tx = (dir.x > 0 ? (maxX - start.x) : (-maxX - start.x)) / dir.x;
+                if (tx > 0f && tx < tBest) tBest = tx;
+            }
+            if (Mathf.Abs(dir.z) > 1e-6f)
+            {
+                float tz = (dir.z > 0 ? (maxZ - start.z) : (-maxZ - start.z)) / dir.z;
+                if (tz > 0f && tz < tBest) tBest = tz;
+            }
+            return tBest;
         }
 
-        void EnsureHiddenObjects(float ballRadius, TableController table)
+        // Distance along dir to the first pocket whose catch-sphere is entered. Returns float.MaxValue
+        // and pocketIdx = -1 if no pocket is hit.
+        static float FirstPocketHit(Vector3 start, Vector3 dir, TableController table, float catchRadius, out int pocketIdx)
         {
-            if (hiddenCue != null && boundTable == table) return;
-            boundTable = table;
-
-            hiddenCue = CreateHiddenBall("HSim_Cue", ballRadius);
-            hiddenTarget = CreateHiddenBall("HSim_Target", ballRadius);
-            SceneManager.MoveGameObjectToScene(hiddenCue, hiddenScene.Scene);
-            SceneManager.MoveGameObjectToScene(hiddenTarget, hiddenScene.Scene);
-            CreateHiddenTableColliders(table);
-        }
-
-        GameObject CreateHiddenBall(string name, float radius)
-        {
-            var go = new GameObject(name);
-            go.transform.localScale = Vector3.one * (radius * 2f);
-            var sc = go.AddComponent<SphereCollider>();
-            sc.radius = 0.5f;
-            var rb = go.AddComponent<Rigidbody>();
-            rb.useGravity = false;
-            rb.drag = 0.6f;
-            rb.angularDrag = 0.4f;
-            return go;
-        }
-
-        void CreateHiddenTableColliders(TableController table)
-        {
-            float w = table.playfieldHalfLength;
-            float h = table.playfieldHalfWidth;
-            // Make the walls tall (0.5 m) and anchored below the ball plane so that a ball
-            // at Y = ballRadius cannot skim over the top edge. Walls span from Y = -0.1 to Y = 0.4.
-            float wallHeight = 0.5f;
-            float wallCenterY = wallHeight * 0.5f - 0.1f;
-            CreateWall("HSim_Wall_Left",
-                new Vector3(-w, wallCenterY, 0f),
-                new Vector3(0.05f, wallHeight, h * 2f));
-            CreateWall("HSim_Wall_Right",
-                new Vector3(w, wallCenterY, 0f),
-                new Vector3(0.05f, wallHeight, h * 2f));
-            CreateWall("HSim_Wall_Top",
-                new Vector3(0f, wallCenterY, h),
-                new Vector3(w * 2f, wallHeight, 0.05f));
-            CreateWall("HSim_Wall_Bottom",
-                new Vector3(0f, wallCenterY, -h),
-                new Vector3(w * 2f, wallHeight, 0.05f));
-        }
-
-        void CreateWall(string name, Vector3 pos, Vector3 size)
-        {
-            var go = new GameObject(name);
-            go.transform.position = pos;
-            var bc = go.AddComponent<BoxCollider>();
-            bc.size = size;
-            SceneManager.MoveGameObjectToScene(go, hiddenScene.Scene);
+            pocketIdx = -1;
+            float tBest = float.MaxValue;
+            for (int i = 0; i < table.Pockets.Count; i++)
+            {
+                var p = table.Pockets[i];
+                Vector3 toPocket = p.Position - start;
+                float tClosest = Vector3.Dot(toPocket, dir);
+                if (tClosest < 0f) continue; // pocket behind
+                Vector3 closest = start + dir * tClosest;
+                Vector3 delta = p.Position - closest;
+                delta.y = 0f;
+                float d2 = delta.sqrMagnitude;
+                float r2 = catchRadius * catchRadius;
+                if (d2 > r2) continue;
+                float h = Mathf.Sqrt(r2 - d2);
+                float tEnter = tClosest - h;
+                if (tEnter < 0f) tEnter = 0f;
+                if (tEnter < tBest) { tBest = tEnter; pocketIdx = i; }
+            }
+            return tBest;
         }
     }
 }
