@@ -136,11 +136,22 @@ namespace PoolAimTrainer.Trajectory
         {
             float w = table.playfieldHalfLength;
             float h = table.playfieldHalfWidth;
-            float railHeight = table.ballRadius * 2f;
-            CreateWall("HSim_Wall_Left", new Vector3(-w, 0f, 0f), new Vector3(0.05f, railHeight, h * 2f));
-            CreateWall("HSim_Wall_Right", new Vector3(w, 0f, 0f), new Vector3(0.05f, railHeight, h * 2f));
-            CreateWall("HSim_Wall_Top", new Vector3(0f, 0f, h), new Vector3(w * 2f, railHeight, 0.05f));
-            CreateWall("HSim_Wall_Bottom", new Vector3(0f, 0f, -h), new Vector3(w * 2f, railHeight, 0.05f));
+            // Make the walls tall (0.5 m) and anchored below the ball plane so that a ball
+            // at Y = ballRadius cannot skim over the top edge. Walls span from Y = -0.1 to Y = 0.4.
+            float wallHeight = 0.5f;
+            float wallCenterY = wallHeight * 0.5f - 0.1f;
+            CreateWall("HSim_Wall_Left",
+                new Vector3(-w, wallCenterY, 0f),
+                new Vector3(0.05f, wallHeight, h * 2f));
+            CreateWall("HSim_Wall_Right",
+                new Vector3(w, wallCenterY, 0f),
+                new Vector3(0.05f, wallHeight, h * 2f));
+            CreateWall("HSim_Wall_Top",
+                new Vector3(0f, wallCenterY, h),
+                new Vector3(w * 2f, wallHeight, 0.05f));
+            CreateWall("HSim_Wall_Bottom",
+                new Vector3(0f, wallCenterY, -h),
+                new Vector3(w * 2f, wallHeight, 0.05f));
         }
 
         void CreateWall(string name, Vector3 pos, Vector3 size)
