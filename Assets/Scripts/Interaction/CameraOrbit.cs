@@ -12,6 +12,9 @@ namespace PoolAimTrainer.Interaction
         public float zoomSpeed = 0.3f;
         public float minDistance = 0.8f;
         public float maxDistance = 4f;
+        public float panSpeed = 0.002f;
+
+        [HideInInspector] public Vector3 panOffset;
 
         Vector2 lastMouse;
 
@@ -37,8 +40,16 @@ namespace PoolAimTrainer.Interaction
 
             Quaternion rot = Quaternion.Euler(pitchDegrees, yawDegrees, 0f);
             Vector3 offset = rot * (Vector3.back * distance);
-            transform.position = (pivot != null ? pivot.position : Vector3.zero) + offset;
+            Vector3 center = (pivot != null ? pivot.position : Vector3.zero) + panOffset;
+            transform.position = center + offset;
             transform.rotation = rot;
+        }
+
+        public void ApplyPan(Vector2 screenDelta)
+        {
+            Vector3 right = transform.right;
+            Vector3 forward = Vector3.Cross(right, Vector3.up).normalized;
+            panOffset -= (right * screenDelta.x + forward * screenDelta.y) * panSpeed * distance;
         }
     }
 }

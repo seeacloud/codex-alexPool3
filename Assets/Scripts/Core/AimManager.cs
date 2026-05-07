@@ -69,8 +69,6 @@ namespace PoolAimTrainer.Core
             if (cueBall == null || targetBall == null || table == null) return;
             if (table.Pockets.Count == 0) return;
 
-            Update_HandleManualAimReset();
-
             PocketMarker desired = userSelectedPocket != null
                 ? userSelectedPocket
                 : (SelectBestSolvablePocket() ?? SelectClosestPocket());
@@ -170,13 +168,7 @@ namespace PoolAimTrainer.Core
             return end;
         }
 
-        void Update_HandleManualAimReset()
-        {
-            if (Input.GetKeyDown(KeyCode.G))
-            {
-                ClearManualAim();
-            }
-        }
+
 
         void UpdatePocketHighlight()
         {

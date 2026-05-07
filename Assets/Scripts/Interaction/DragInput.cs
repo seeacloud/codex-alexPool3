@@ -7,14 +7,17 @@ namespace PoolAimTrainer.Interaction
     public class DragInput : MonoBehaviour
     {
         public Camera cam;
-        public LayerMask ballLayer = ~0;
         public float pickRadius = 0.05f;
         [Tooltip("点击袋口的吸附半径（米）")]
         public float pocketPickRadius = 0.1f;
         [Tooltip("可选：如果设置，点击袋口会写入 aimManager.userSelectedPocket")]
         public AimManager aimManager;
+        [Tooltip("摄像机环绕组件（用于平移）")]
+        public CameraOrbit cameraOrbit;
 
         BallController dragging;
+        bool panning;
+        Vector2 lastPanScreenPos;
         Plane tablePlane;
 
         void Awake()
@@ -36,21 +39,42 @@ namespace PoolAimTrainer.Interaction
                     {
                         var pocket = FindClosestPocket(hit);
                         if (pocket != null && aimManager != null)
+                        {
                             aimManager.SetUserPocket(pocket);
+                        }
+                        else
+                        {
+                            panning = true;
+                            lastPanScreenPos = InputRouter.PrimaryScreenPosition;
+                        }
                     }
                 }
-            }
-            else if (InputRouter.PrimaryHeld && dragging != null)
-            {
-                Ray r = cam.ScreenPointToRay(InputRouter.PrimaryScreenPosition);
-                if (tablePlane.Raycast(r, out float t))
+                else
                 {
-                    dragging.MoveTo(r.GetPoint(t));
+                    panning = true;
+                    lastPanScreenPos = InputRouter.PrimaryScreenPosition;
+                }
+            }
+            else if (InputRouter.PrimaryHeld)
+            {
+                if (dragging != null)
+                {
+                    Ray r = cam.ScreenPointToRay(InputRouter.PrimaryScreenPosition);
+                    if (tablePlane.Raycast(r, out float t))
+                        dragging.MoveTo(r.GetPoint(t));
+                }
+                else if (panning && cameraOrbit != null)
+                {
+                    Vector2 current = InputRouter.PrimaryScreenPosition;
+                    Vector2 delta = current - lastPanScreenPos;
+                    cameraOrbit.ApplyPan(delta);
+                    lastPanScreenPos = current;
                 }
             }
             else if (InputRouter.PrimaryUp)
             {
                 dragging = null;
+                panning = false;
             }
         }
 

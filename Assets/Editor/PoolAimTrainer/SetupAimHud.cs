@@ -65,7 +65,7 @@ namespace PoolAimTrainer.EditorTools
             panelRect.anchorMin = new Vector2(1f, 1f);
             panelRect.anchorMax = new Vector2(1f, 1f);
             panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.sizeDelta = new Vector2(320f, 340f);
+            panelRect.sizeDelta = new Vector2(360f, 440f);
             panelRect.anchoredPosition = new Vector2(-20f, -80f);
 
             var bg = panelGo.GetComponent<Image>();
@@ -167,6 +167,23 @@ namespace PoolAimTrainer.EditorTools
             labelTmp.alignment = TMPro.TextAlignmentOptions.Center;
             ctrl.offsetLabel = labelTmp;
             ctrl.panelRect = panelRect;
+            ctrl.sizeSmall = new Vector2(360f, 440f);
+            ctrl.sizeLarge = new Vector2(640f, 720f);
+
+            // Resize button (top-left corner of HUD panel)
+            var resizeBtn = EnsureButtonChild(panelGo.transform, "BtnResize", "⤢", new Vector2(44f, 44f), Vector2.zero);
+            var resizeRect = resizeBtn.GetComponent<RectTransform>();
+            resizeRect.anchorMin = new Vector2(0f, 1f);
+            resizeRect.anchorMax = new Vector2(0f, 1f);
+            resizeRect.pivot = new Vector2(0f, 1f);
+            resizeRect.anchoredPosition = new Vector2(4f, -4f);
+            // Wire resize button to controller
+            var resizeBtnComp = resizeBtn.GetComponent<UnityEngine.UI.Button>();
+            if (resizeBtnComp != null)
+            {
+                UnityEditor.Events.UnityEventTools.RemovePersistentListener(resizeBtnComp.onClick, 0);
+                UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(resizeBtnComp.onClick, ctrl.ToggleSize);
+            }
 
             // Nudge buttons (< and >) between offset label and image
             var nudgeContainer = EnsureChild(panelGo.transform, "NudgeButtons");
@@ -177,8 +194,8 @@ namespace PoolAimTrainer.EditorTools
             nudgeRect.anchoredPosition = new Vector2(0f, 28f);
             nudgeRect.sizeDelta = new Vector2(0f, 40f);
 
-            var leftBtn = EnsureButtonChild(nudgeContainer.transform, "BtnLeft", "<", new Vector2(60f, 36f), new Vector2(-80f, 0f));
-            var rightBtn = EnsureButtonChild(nudgeContainer.transform, "BtnRight", ">", new Vector2(60f, 36f), new Vector2(80f, 0f));
+            var leftBtn = EnsureButtonChild(nudgeContainer.transform, "BtnLeft", "<", new Vector2(120f, 72f), new Vector2(-100f, 0f));
+            var rightBtn = EnsureButtonChild(nudgeContainer.transform, "BtnRight", ">", new Vector2(120f, 72f), new Vector2(100f, 0f));
             ctrl.nudgeLeftBtn = leftBtn.GetComponent<UnityEngine.UI.Button>();
             ctrl.nudgeRightBtn = rightBtn.GetComponent<UnityEngine.UI.Button>();
 
