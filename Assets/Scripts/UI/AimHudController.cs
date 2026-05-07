@@ -75,23 +75,22 @@ namespace PoolAimTrainer.UI
             Rect r = rawImageRect.rect;
             if (r.width <= 0f || r.height <= 0f) return;
 
+            // Horizontal axis is locked to target ball center (v = 0.5) = HUD vertical middle.
+            float centerY = r.height * 0.5f;
             float clickX = lastClickNormalized.x * r.width;
-            float clickY = lastClickNormalized.y * r.height;
 
             if (crosshairHBar != null)
             {
                 crosshairHBar.gameObject.SetActive(true);
-                // Horizontal bar anchor (0,0)-(1,0) stretches along X. We only set Y position.
-                crosshairHBar.anchoredPosition = new Vector2(0f, clickY);
+                crosshairHBar.anchoredPosition = new Vector2(0f, centerY);
             }
             if (crosshairVBar != null)
             {
                 crosshairVBar.gameObject.SetActive(true);
-                // Vertical bar: compute its pixel height from (ballDiameter + extra) metres and orthoSize.
                 float worldHeight = ballDiameter + crosshairVerticalExtraMeters;
                 float pxHeight = worldHeight / (2f * orthoSize) * r.height;
                 crosshairVBar.sizeDelta = new Vector2(crosshairVBar.sizeDelta.x, pxHeight);
-                crosshairVBar.anchoredPosition = new Vector2(clickX, clickY);
+                crosshairVBar.anchoredPosition = new Vector2(clickX, centerY);
             }
         }
 
@@ -101,11 +100,13 @@ namespace PoolAimTrainer.UI
             float aspect = 1f;
             if (aimCamera != null && aimCamera.pixelHeight > 0)
                 aspect = (float)aimCamera.pixelWidth / aimCamera.pixelHeight;
-            float dxWorld = (lastClickNormalized.x - 0.5f) * 2f * orthoSize * aspect;
-            float dxMm = dxWorld * 1000f;
+            float dxWorldM = (lastClickNormalized.x - 0.5f) * 2f * orthoSize * aspect;
+            float dxMm = dxWorldM * 1000f;
+            string sign = dxMm >= 0f ? "+" : "-";
+            float absMm = Mathf.Abs(dxMm);
             string side = dxMm >= 0f ? "R" : "L";
             offsetLabel.text = string.Format(CultureInfo.InvariantCulture,
-                "dx = {0:+0.0;-0.0} mm  {1}", dxMm, side);
+                "dx = {0}{1:F1} mm  {2}", sign, absMm, side);
         }
 
         public void OnPointerClick(PointerEventData e) { ProcessClick(e); }
@@ -124,7 +125,9 @@ namespace PoolAimTrainer.UI
             if (rect.width <= 0f || rect.height <= 0f) return;
 
             float u = (localPoint.x - rect.xMin) / rect.width;
-            float v = (localPoint.y - rect.yMin) / rect.height;
+            // Lock vertical component to target ball center (v = 0.5) so aim is constrained
+            // to the horizontal plane through the target ball.
+            float v = 0.5f;
             lastClickNormalized = new Vector2(u, v);
             hasClicked = true;
 
