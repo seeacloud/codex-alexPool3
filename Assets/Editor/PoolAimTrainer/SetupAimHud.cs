@@ -112,6 +112,54 @@ namespace PoolAimTrainer.EditorTools
             ctrl.aimManager = gm.GetComponent<AimManager>();
             ctrl.orthoSize = 0.08f;
 
+            // Crosshair marker (parented to RawImage so its anchored coords are in image space)
+            var crossChild = imgGo.transform.Find("Crosshair");
+            GameObject crossGo;
+            if (crossChild != null) crossGo = crossChild.gameObject;
+            else
+            {
+                crossGo = new GameObject("Crosshair", typeof(RectTransform));
+                crossGo.transform.SetParent(imgGo.transform, false);
+                var hBar = new GameObject("H", typeof(RectTransform)).GetComponent<RectTransform>();
+                hBar.SetParent(crossGo.transform, false);
+                var hImg = hBar.gameObject.AddComponent<Image>();
+                hImg.color = new Color(1f, 0.3f, 0.3f, 0.95f);
+                hBar.sizeDelta = new Vector2(30f, 2f);
+                var vBar = new GameObject("V", typeof(RectTransform)).GetComponent<RectTransform>();
+                vBar.SetParent(crossGo.transform, false);
+                var vImg = vBar.gameObject.AddComponent<Image>();
+                vImg.color = new Color(1f, 0.3f, 0.3f, 0.95f);
+                vBar.sizeDelta = new Vector2(2f, 30f);
+            }
+            var crossRect = crossGo.GetComponent<RectTransform>();
+            crossRect.anchorMin = new Vector2(0f, 0f);
+            crossRect.anchorMax = new Vector2(0f, 0f);
+            crossRect.pivot = new Vector2(0.5f, 0.5f);
+            crossRect.sizeDelta = Vector2.zero;
+            ctrl.crosshair = crossRect;
+
+            // Offset label (below the HUD image)
+            var labelChild = panelGo.transform.Find("OffsetLabel");
+            GameObject labelGo;
+            if (labelChild != null) labelGo = labelChild.gameObject;
+            else
+            {
+                labelGo = new GameObject("OffsetLabel", typeof(RectTransform));
+                labelGo.transform.SetParent(panelGo.transform, false);
+                var tmp = labelGo.AddComponent<TMPro.TextMeshProUGUI>();
+                tmp.text = "Δ = 0.0 mm";
+                tmp.fontSize = 20;
+                tmp.color = new Color(1f, 1f, 0.7f, 1f);
+                tmp.alignment = TMPro.TextAlignmentOptions.Center;
+            }
+            var labelRect = labelGo.GetComponent<RectTransform>();
+            labelRect.anchorMin = new Vector2(0f, 0f);
+            labelRect.anchorMax = new Vector2(1f, 0f);
+            labelRect.pivot = new Vector2(0.5f, 0f);
+            labelRect.anchoredPosition = new Vector2(0f, 4f);
+            labelRect.sizeDelta = new Vector2(0f, 22f);
+            ctrl.offsetLabel = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
+
             // Title label
             var titleChild = panelGo.transform.Find("Title");
             GameObject titleGo;

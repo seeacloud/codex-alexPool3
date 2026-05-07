@@ -49,6 +49,8 @@ namespace PoolAimTrainer.Core
         }
 
         Vector3 lastCue, lastTarget, lastPocket;
+        Vector3 lastManualAim;
+        bool lastHadManualAim;
         PocketMarker lastForcedPocketSource;
         PocketMarker lastHighlighted;
         bool simDirty;
@@ -180,7 +182,9 @@ namespace PoolAimTrainer.Core
         {
             return cueBall.Center != lastCue
                 || targetBall.Center != lastTarget
-                || (currentPocket != null && currentPocket.Position != lastPocket);
+                || (currentPocket != null && currentPocket.Position != lastPocket)
+                || lastHadManualAim != hasManualAim
+                || (hasManualAim && lastManualAim != manualAimDir);
         }
 
         void RememberPositions()
@@ -188,10 +192,17 @@ namespace PoolAimTrainer.Core
             lastCue = cueBall.Center;
             lastTarget = targetBall.Center;
             if (currentPocket != null) lastPocket = currentPocket.Position;
+            lastHadManualAim = hasManualAim;
+            lastManualAim = manualAimDir;
         }
 
         void Recompute()
         {
+            if (hasManualAim && manualAimDir.sqrMagnitude > 1e-6f)
+            {
+                RecomputeManual();
+                return;
+            }
             if (currentPocket == null)
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();
@@ -215,6 +226,45 @@ namespace PoolAimTrainer.Core
             var side = DetermineAimSide(r);
             if (hintPanel != null)
                 hintPanel.Show(HintGenerator.Generate(r.cutAngleDegrees, offsetM * 100f, side));
+        }
+
+        void RecomputeManual()
+        {
+            Vector3 aimDir = manualAimDir.normalized;
+            float R2 = 2f * table.ballRadius;
+            Vector3 toTarget = targetBall.Center - cueBall.Center;
+            float b = Vector3.Dot(aimDir, toTarget);
+            float c = toTarget.sqrMagnitude - R2 * R2;
+            float disc = b * b - c;
+
+            if (disc < 0f || b < 0f)
+            {
+                if (ghostRenderer != null) ghostRenderer.Hide();
+                if (aimLineRenderer != null) aimLineRenderer.Hide();
+                if (hintPanel != null) hintPanel.Show("手动瞄准：未击中目标球（按 G 重置）");
+                return;
+            }
+
+            float t = b - Mathf.Sqrt(disc);
+            Vector3 ghost = cueBall.Center + aimDir * t;
+            Vector3 targetDir = (targetBall.Center - ghost).normalized;
+
+            if (ghostRenderer != null) ghostRenderer.Show(ghost);
+            if (aimLineRenderer != null)
+            {
+                Vector3 objEnd = targetBall.Center + targetDir * 1.5f;
+                aimLineRenderer.Show(cueBall.Center, ghost, targetBall.Center, objEnd);
+            }
+
+            float cutAngleDeg = 0f;
+            if (currentPocket != null)
+            {
+                Vector3 idealDir = (currentPocket.Position - targetBall.Center).normalized;
+                float dot = Mathf.Clamp(Vector3.Dot(idealDir, targetDir), -1f, 1f);
+                cutAngleDeg = Mathf.Acos(dot) * Mathf.Rad2Deg;
+            }
+            if (hintPanel != null)
+                hintPanel.Show($"手动瞄准 · 偏离理想方向 {cutAngleDeg:0.#}° · 按 G 回到自动瞄准");
         }
 
         float ComputeOffsetCm(AimResult r, float ballRadius)
