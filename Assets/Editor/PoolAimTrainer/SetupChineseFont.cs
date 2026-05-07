@@ -69,28 +69,31 @@ namespace PoolAimTrainer.EditorTools
             Debug.Log($"[SetupChineseFont] Font loaded: {font.name}");
 
             var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(TargetAssetPath);
-            TMP_FontAsset tmpAsset;
             if (existing != null)
             {
-                tmpAsset = existing;
-                Debug.Log($"[SetupChineseFont] Using existing TMP asset at {TargetAssetPath}");
-            }
-            else
-            {
-                tmpAsset = TMP_FontAsset.CreateFontAsset(
-                    font,
-                    samplingPointSize: 90,
-                    atlasPadding: 9,
-                    renderMode: GlyphRenderMode.SDFAA,
-                    atlasWidth: 1024,
-                    atlasHeight: 1024,
-                    atlasPopulationMode: AtlasPopulationMode.Dynamic);
-                AssetDatabase.CreateAsset(tmpAsset, TargetAssetPath);
-                AssetDatabase.SaveAssets();
-                Debug.Log($"[SetupChineseFont] Created TMP asset at {TargetAssetPath}");
+                Debug.Log($"[SetupChineseFont] Deleting old TMP asset to rebuild fresh");
+                AssetDatabase.DeleteAsset(TargetAssetPath);
+                existing = null;
             }
 
+            var tmpAsset = TMP_FontAsset.CreateFontAsset(
+                font,
+                samplingPointSize: 48,
+                atlasPadding: 5,
+                renderMode: GlyphRenderMode.SDFAA,
+                atlasWidth: 2048,
+                atlasHeight: 2048,
+                atlasPopulationMode: AtlasPopulationMode.Dynamic);
+            AssetDatabase.CreateAsset(tmpAsset, TargetAssetPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SetupChineseFont] Created fresh TMP asset at {TargetAssetPath} (2048x2048 atlas)");
+
             AddToTmpFallbacks(tmpAsset);
+
+            // Pre-populate the dynamic atlas with every character we know we'll render.
+            // Without this, the Dynamic atlas may not have rasterised some glyphs yet
+            // and they appear as blank/empty in the UI.
+            PrePopulate(tmpAsset);
 
             var texts = Object.FindObjectsOfType<TMP_Text>(includeInactive: true);
             int reassigned = 0;
@@ -128,6 +131,32 @@ namespace PoolAimTrainer.EditorTools
             EditorUtility.SetDirty(settings);
             AssetDatabase.SaveAssets();
             Debug.Log($"[SetupChineseFont] Added to TMP_Settings fallback list");
+        }
+
+        static void PrePopulate(TMP_FontAsset fontAsset)
+        {
+            // All characters used in our UI: HintGenerator, AimManager messages, HUD labels,
+            // pocket numbers, offset readout, etc.
+            const string chars =
+                "0123456789.+-°·" +
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
+                " =()cmmmRLdx" +
+                "直线球小中等大角度薄切瞄向目标左右处" +
+                "没有可用袋口主位于与之间无法入" +
+                "手动瞄准未击偏离理想方向按重置回到自" +
+                "拖或试" +
+                "HUDclickaimGreset";
+            bool success = fontAsset.TryAddCharacters(chars, out string missing);
+            if (success)
+            {
+                Debug.Log($"[SetupChineseFont] Pre-populated {chars.Length} characters into atlas");
+            }
+            else
+            {
+                Debug.LogWarning($"[SetupChineseFont] Some characters could not be added. Missing: {missing}");
+            }
+            EditorUtility.SetDirty(fontAsset);
+            AssetDatabase.SaveAssets();
         }
     }
 }
