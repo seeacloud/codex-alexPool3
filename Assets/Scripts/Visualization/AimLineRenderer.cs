@@ -2,34 +2,32 @@ using UnityEngine;
 
 namespace PoolAimTrainer.Visualization
 {
-    public class AimLineRenderer : MonoBehaviour
+    public class AimLineRenderer : DashLine
     {
-        public LineRenderer cueToGhost;
-        public LineRenderer objectToPocket;
+        [Tooltip("主球→Ghost 线颜色")]
+        public Color cueToGhostColor = new Color(1f, 1f, 1f, 1f);
+        [Tooltip("目标球→袋口线颜色")]
+        public Color objectToPocketColor = new Color(0.4f, 1f, 0.4f, 1f);
+
+        LineRenderer lrCueToGhost;
+        LineRenderer lrObjToPocket;
+
+        void Awake()
+        {
+            lrCueToGhost = CreateDashLineRenderer("LR_CueToGhost", cueToGhostColor);
+            lrObjToPocket = CreateDashLineRenderer("LR_ObjToPocket", objectToPocketColor);
+        }
 
         public void Show(Vector3 cue, Vector3 ghost, Vector3 obj, Vector3 pocket)
         {
-            if (cueToGhost != null)
-            {
-                cueToGhost.enabled = true;
-                cueToGhost.positionCount = 2;
-                cueToGhost.SetPosition(0, cue);
-                cueToGhost.SetPosition(1, ghost);
-            }
-
-            if (objectToPocket != null)
-            {
-                objectToPocket.enabled = true;
-                objectToPocket.positionCount = 2;
-                objectToPocket.SetPosition(0, obj);
-                objectToPocket.SetPosition(1, pocket);
-            }
+            SetLine(lrCueToGhost, cue, ghost);
+            SetLine(lrObjToPocket, obj, pocket);
         }
 
         public void Hide()
         {
-            if (cueToGhost != null) cueToGhost.enabled = false;
-            if (objectToPocket != null) objectToPocket.enabled = false;
+            HideLine(lrCueToGhost);
+            HideLine(lrObjToPocket);
         }
     }
 }

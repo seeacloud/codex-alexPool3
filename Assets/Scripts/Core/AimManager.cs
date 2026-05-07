@@ -27,6 +27,9 @@ namespace PoolAimTrainer.Core
         [Tooltip("当前选中的袋口（自动选择或手动点选）")]
         public PocketMarker currentPocket;
 
+        [Tooltip("是否显示 ghost ball 和瞄准线（白线+绿线）；false 时仅隐藏这两项，其他参考线照常")]
+        public bool showGhostAndAimLines = true;
+
         [Tooltip("用户手动选择的袋口；非 null 时优先使用它而非自动推荐")]
         public PocketMarker userSelectedPocket;
 
@@ -57,6 +60,14 @@ namespace PoolAimTrainer.Core
         public void SetUserPocket(PocketMarker pocket)
         {
             userSelectedPocket = pocket;
+        }
+
+        public void ForceRefresh()
+        {
+            lastCue = Vector3.positiveInfinity;
+            lastTarget = Vector3.positiveInfinity;
+            lastPocket = Vector3.positiveInfinity;
+            simDirty = true;
         }
 
         public void ClearUserPocket()
@@ -221,6 +232,13 @@ namespace PoolAimTrainer.Core
 
         void Recompute()
         {
+            if (!showGhostAndAimLines)
+            {
+                if (ghostRenderer != null) ghostRenderer.Hide();
+                if (aimLineRenderer != null) aimLineRenderer.Hide();
+                if (hintPanel != null) hintPanel.Clear();
+                return;
+            }
             if (currentPocket == null)
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();

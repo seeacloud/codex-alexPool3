@@ -8,12 +8,6 @@ using PoolAimTrainer.Visualization;
 
 namespace PoolAimTrainer.EditorTools
 {
-    /// <summary>
-    /// Adds a TargetBallPath LineRenderer (orange, physics trajectory of the object ball)
-    /// and links it into AimManager.pathRenderer. Run after Phase 4.
-    ///
-    /// Menu: PoolAimTrainer -> Setup TargetBall Path Line
-    /// </summary>
     public static class SetupTargetBallPath
     {
         [MenuItem("PoolAimTrainer/Setup TargetBall Path Line")]
@@ -29,12 +23,8 @@ namespace PoolAimTrainer.EditorTools
                 return;
             }
 
-            var lr = CreateOrUpdateLine(vis.transform, "TargetBallPath",
-                new Color(1f, 0.55f, 0.15f, 0.95f), width: 0.005f);
-
             var pathRenderer = vis.GetComponent<TargetBallPathRenderer>();
             if (pathRenderer == null) pathRenderer = vis.AddComponent<TargetBallPathRenderer>();
-            pathRenderer.line = lr;
             pathRenderer.decimation = 2;
 
             var aim = gm.GetComponent<AimManager>();
@@ -49,36 +39,8 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.SaveScene(scene);
 
             EditorUtility.DisplayDialog("Done",
-                "TargetBallPath (orange) line wired. Press Play and drag balls to see the target ball's physical trajectory in real time.",
+                "TargetBallPath wired (GL.LINES rendering). Press Play and drag balls.",
                 "OK");
-        }
-
-        static LineRenderer CreateOrUpdateLine(Transform parent, string name, Color color, float width)
-        {
-            var t = parent.Find(name);
-            GameObject go;
-            if (t == null)
-            {
-                go = new GameObject(name);
-                go.transform.SetParent(parent, false);
-            }
-            else go = t.gameObject;
-
-            var lr = go.GetComponent<LineRenderer>();
-            if (lr == null) lr = go.AddComponent<LineRenderer>();
-            lr.useWorldSpace = true;
-            lr.positionCount = 2;
-            lr.startWidth = width;
-            lr.endWidth = width;
-            lr.startColor = color;
-            lr.endColor = color;
-            var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            var mat = new Material(shader);
-            mat.color = color;
-            lr.sharedMaterial = mat;
-            lr.enabled = false;
-            return lr;
         }
     }
 }

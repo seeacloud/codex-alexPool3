@@ -2,25 +2,25 @@ using UnityEngine;
 
 namespace PoolAimTrainer.Visualization
 {
-    /// <summary>
-    /// Draws the object ball's physically-simulated trajectory as a polyline.
-    /// Unlike AimLineRenderer.objectToPocket (which is a straight ideal line
-    /// from target to pocket), this renderer shows the ACTUAL path including
-    /// rail bounces and post-impact motion.
-    /// </summary>
-    public class TargetBallPathRenderer : MonoBehaviour
+    public class TargetBallPathRenderer : DashLine
     {
-        public LineRenderer line;
+        [Tooltip("轨迹线颜色")]
+        public Color lineColor = new Color(1f, 0.6f, 0.2f, 1f);
+        [Tooltip("每隔 N 个采样点取 1 个")]
+        public int decimation = 2;
 
-        [Tooltip("每隔 N 个采样点取 1 个，减少顶点数（1 = 全量）")]
-        public int decimation = 1;
+        LineRenderer lr;
+
+        void Awake()
+        {
+            lr = CreateDashLineRenderer("LR_TargetPath", lineColor);
+        }
 
         public void Show(Vector3[] trajectory)
         {
-            if (line == null) return;
             if (trajectory == null || trajectory.Length < 2)
             {
-                line.enabled = false;
+                Hide();
                 return;
             }
 
@@ -29,18 +29,18 @@ namespace PoolAimTrainer.Visualization
             int count = (n + step - 1) / step;
             if (count < 2) count = 2;
 
-            line.enabled = true;
-            line.positionCount = count;
+            var points = new Vector3[count];
             for (int i = 0; i < count; i++)
             {
                 int idx = Mathf.Min(i * step, n - 1);
-                line.SetPosition(i, trajectory[idx]);
+                points[i] = trajectory[idx];
             }
+            SetPolyline(lr, points);
         }
 
         public void Hide()
         {
-            if (line != null) line.enabled = false;
+            HideLine(lr);
         }
     }
 }

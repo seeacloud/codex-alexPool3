@@ -58,13 +58,8 @@ namespace PoolAimTrainer.EditorTools
             if (vis.GetComponent<GhostBallRenderer>() == null)
                 vis.AddComponent<GhostBallRenderer>().ghostPrefab = ghostPrefab;
 
-            LineRenderer cueLine = FindOrCreateLine(vis.transform, "AimLine_CueToGhost", new Color(1f, 1f, 1f, 0.9f));
-            LineRenderer objLine = FindOrCreateLine(vis.transform, "AimLine_ObjectToPocket", new Color(0.3f, 1f, 0.3f, 0.9f));
-
             var aimLineRenderer = vis.GetComponent<AimLineRenderer>();
             if (aimLineRenderer == null) aimLineRenderer = vis.AddComponent<AimLineRenderer>();
-            aimLineRenderer.cueToGhost = cueLine;
-            aimLineRenderer.objectToPocket = objLine;
 
             var canvas = SetupUICanvas();
             var hintPanel = SetupHintPanel(canvas);
@@ -120,34 +115,6 @@ namespace PoolAimTrainer.EditorTools
             var prefab = PrefabUtility.SaveAsPrefabAsset(temp, GhostPrefabPath);
             Object.DestroyImmediate(temp);
             return prefab;
-        }
-
-        static LineRenderer FindOrCreateLine(Transform parent, string name, Color color)
-        {
-            var t = parent.Find(name);
-            GameObject go;
-            if (t == null)
-            {
-                go = new GameObject(name);
-                go.transform.SetParent(parent, false);
-            }
-            else go = t.gameObject;
-
-            var lr = go.GetComponent<LineRenderer>();
-            if (lr == null) lr = go.AddComponent<LineRenderer>();
-            lr.useWorldSpace = true;
-            lr.positionCount = 2;
-            lr.startWidth = 0.003f;
-            lr.endWidth = 0.003f;
-            lr.startColor = color;
-            lr.endColor = color;
-            var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            var mat = new Material(shader);
-            mat.color = color;
-            lr.sharedMaterial = mat;
-            lr.enabled = false;
-            return lr;
         }
 
         static Canvas SetupUICanvas()
