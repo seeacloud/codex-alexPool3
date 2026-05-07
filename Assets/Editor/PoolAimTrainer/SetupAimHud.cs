@@ -166,6 +166,21 @@ namespace PoolAimTrainer.EditorTools
             labelTmp.color = new Color(1f, 1f, 0.7f, 1f);
             labelTmp.alignment = TMPro.TextAlignmentOptions.Center;
             ctrl.offsetLabel = labelTmp;
+            ctrl.panelRect = panelRect;
+
+            // Nudge buttons (< and >) between offset label and image
+            var nudgeContainer = EnsureChild(panelGo.transform, "NudgeButtons");
+            var nudgeRect = nudgeContainer.GetComponent<RectTransform>();
+            nudgeRect.anchorMin = new Vector2(0f, 0f);
+            nudgeRect.anchorMax = new Vector2(1f, 0f);
+            nudgeRect.pivot = new Vector2(0.5f, 0f);
+            nudgeRect.anchoredPosition = new Vector2(0f, 28f);
+            nudgeRect.sizeDelta = new Vector2(0f, 40f);
+
+            var leftBtn = EnsureButtonChild(nudgeContainer.transform, "BtnLeft", "<", new Vector2(60f, 36f), new Vector2(-80f, 0f));
+            var rightBtn = EnsureButtonChild(nudgeContainer.transform, "BtnRight", ">", new Vector2(60f, 36f), new Vector2(80f, 0f));
+            ctrl.nudgeLeftBtn = leftBtn.GetComponent<UnityEngine.UI.Button>();
+            ctrl.nudgeRightBtn = rightBtn.GetComponent<UnityEngine.UI.Button>();
 
             var scene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(scene);
@@ -182,6 +197,41 @@ namespace PoolAimTrainer.EditorTools
             if (t != null) return t.gameObject;
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
+            return go;
+        }
+
+        static GameObject EnsureButtonChild(Transform parent, string name, string label, Vector2 size, Vector2 pos)
+        {
+            var t = parent.Find(name);
+            GameObject go;
+            if (t != null) go = t.gameObject;
+            else
+            {
+                go = new GameObject(name, typeof(RectTransform));
+                go.transform.SetParent(parent, false);
+                var img = go.AddComponent<Image>();
+                img.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+                var btn = go.AddComponent<UnityEngine.UI.Button>();
+                btn.targetGraphic = img;
+                var txtGo = new GameObject("Text", typeof(RectTransform));
+                txtGo.transform.SetParent(go.transform, false);
+                var tmp = txtGo.AddComponent<TMPro.TextMeshProUGUI>();
+                tmp.text = label;
+                tmp.fontSize = 28;
+                tmp.color = new Color(1f, 0.4f, 0.4f, 1f);
+                tmp.alignment = TMPro.TextAlignmentOptions.Center;
+                var txtRect = txtGo.GetComponent<RectTransform>();
+                txtRect.anchorMin = Vector2.zero;
+                txtRect.anchorMax = Vector2.one;
+                txtRect.offsetMin = Vector2.zero;
+                txtRect.offsetMax = Vector2.zero;
+            }
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = pos;
             return go;
         }
     }

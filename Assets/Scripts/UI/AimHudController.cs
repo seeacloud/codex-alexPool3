@@ -38,6 +38,18 @@ namespace PoolAimTrainer.UI
         public float crosshairVerticalExtraMeters = 0.010f;
         public float ballDiameter = 0.0572f;
 
+        [Header("Nudge & Resize")]
+        public UnityEngine.UI.Button nudgeLeftBtn;
+        public UnityEngine.UI.Button nudgeRightBtn;
+        [Tooltip("每次微调偏移量（毫米）")]
+        public float nudgeStepMm = 0.5f;
+        [Tooltip("HUD 面板 RectTransform（用于放大/缩小）")]
+        public RectTransform panelRect;
+        public Vector2 sizeSmall = new Vector2(320f, 340f);
+        public Vector2 sizeLarge = new Vector2(640f, 660f);
+        public KeyCode resizeKey = KeyCode.H;
+        bool isLarge;
+
         Vector2 lastClickNormalized = new Vector2(0.5f, 0.5f);
         bool hasClicked;
 
@@ -46,11 +58,16 @@ namespace PoolAimTrainer.UI
             if (crosshairHBar != null) crosshairHBar.gameObject.SetActive(false);
             if (crosshairVBar != null) crosshairVBar.gameObject.SetActive(false);
             if (offsetLabel != null) offsetLabel.text = "dx = 0.0 mm";
+            if (nudgeLeftBtn != null) nudgeLeftBtn.onClick.AddListener(() => NudgeAim(-nudgeStepMm));
+            if (nudgeRightBtn != null) nudgeRightBtn.onClick.AddListener(() => NudgeAim(+nudgeStepMm));
         }
 
         void LateUpdate()
         {
             if (aimCamera == null || cueBall == null || targetBall == null) return;
+
+            if (Input.GetKeyDown(resizeKey)) ToggleSize();
+
             Vector3 dir = targetBall.Center - cueBall.Center;
             float dist = dir.magnitude;
             if (dist < 1e-4f) return;
@@ -137,6 +154,37 @@ namespace PoolAimTrainer.UI
             Vector3 aimDir = (worldPoint - cueBall.Center).normalized;
 
             if (aimManager != null) aimManager.SetManualAimDir(aimDir);
+        }
+
+        void NudgeAim(float deltaMm)
+        {
+            float aspect = 1f;
+            if (aimCamera != null && aimCamera.pixelHeight > 0)
+                aspect = (float)aimCamera.pixelWidth / aimCamera.pixelHeight;
+            float deltaWorld = deltaMm * 0.001f;
+            float deltaU = deltaWorld / (2f * orthoSize * aspect);
+            lastClickNormalized.x = Mathf.Clamp01(lastClickNormalized.x + deltaU);
+            hasClicked = true;
+            RecomputeAimFromNormalized();
+        }
+
+        void RecomputeAimFromNormalized()
+        {
+            if (aimCamera == null || cueBall == null || targetBall == null) return;
+            float u = lastClickNormalized.x;
+            float v = lastClickNormalized.y;
+            float zDepth = Mathf.Max(nearOffset + 0.01f,
+                Vector3.Distance(cueBall.Center, targetBall.Center));
+            Vector3 worldPoint = aimCamera.ViewportToWorldPoint(new Vector3(u, v, zDepth));
+            Vector3 aimDir = (worldPoint - cueBall.Center).normalized;
+            if (aimManager != null) aimManager.SetManualAimDir(aimDir);
+        }
+
+        void ToggleSize()
+        {
+            if (panelRect == null) return;
+            isLarge = !isLarge;
+            panelRect.sizeDelta = isLarge ? sizeLarge : sizeSmall;
         }
     }
 }
