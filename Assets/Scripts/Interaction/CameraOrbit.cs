@@ -17,9 +17,17 @@ namespace PoolAimTrainer.Interaction
 
         void LateUpdate()
         {
-            if (InputRouter.SecondaryHeld)
+            Vector2 delta = Vector2.zero;
+            if (Input.touchCount == 2)
             {
-                Vector2 delta = (Vector2)Input.mousePosition - lastMouse;
+                delta = InputRouter.TwoFingerDelta;
+            }
+            else if (InputRouter.SecondaryHeld)
+            {
+                delta = (Vector2)Input.mousePosition - lastMouse;
+            }
+            if (delta.sqrMagnitude > 0.01f)
+            {
                 yawDegrees += delta.x * rotateSpeed * 0.1f;
                 pitchDegrees = Mathf.Clamp(pitchDegrees - delta.y * rotateSpeed * 0.1f, 15f, 85f);
             }

@@ -180,7 +180,7 @@ namespace PoolAimTrainer.UI
             if (aimManager != null) aimManager.SetManualAimDir(aimDir);
         }
 
-        void ToggleSize()
+        public void ToggleSize()
         {
             if (panelRect == null) return;
             isLarge = !isLarge;
