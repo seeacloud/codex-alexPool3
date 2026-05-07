@@ -233,7 +233,7 @@ namespace PoolAimTrainer.Core
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();
                 if (aimLineRenderer != null) aimLineRenderer.Hide();
-                if (hintPanel != null) hintPanel.Show("没有可用袋口");
+                if (hintPanel != null) hintPanel.Clear();
                 return;
             }
             var r = AimSolver.Compute(
@@ -242,7 +242,7 @@ namespace PoolAimTrainer.Core
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();
                 if (aimLineRenderer != null) aimLineRenderer.Hide();
-                if (hintPanel != null) hintPanel.Show(r.hintText);
+                if (hintPanel != null) hintPanel.Clear();
                 return;
             }
             if (ghostRenderer != null) ghostRenderer.Show(r.ghostBallCenter);
@@ -250,8 +250,7 @@ namespace PoolAimTrainer.Core
                 aimLineRenderer.Show(r.aimLineStart, r.aimLineEnd, r.objectBallToPocketStart, r.objectBallToPocketEnd);
             float offsetM = ComputeOffsetCm(r, table.ballRadius);
             var side = DetermineAimSide(r);
-            if (hintPanel != null)
-                hintPanel.Show(HintGenerator.Generate(r.cutAngleDegrees, offsetM * 100f, side));
+            if (hintPanel != null) hintPanel.Clear();
         }
 
         float ComputeOffsetCm(AimResult r, float ballRadius)
