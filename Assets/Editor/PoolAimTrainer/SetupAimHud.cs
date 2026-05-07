@@ -171,19 +171,13 @@ namespace PoolAimTrainer.EditorTools
             ctrl.sizeLarge = new Vector2(640f, 720f);
 
             // Resize button (top-left corner of HUD panel)
-            var resizeBtn = EnsureButtonChild(panelGo.transform, "BtnResize", "⤢", new Vector2(44f, 44f), Vector2.zero);
+            var resizeBtn = EnsureButtonChild(panelGo.transform, "BtnResize", "[+]", new Vector2(44f, 44f), Vector2.zero);
             var resizeRect = resizeBtn.GetComponent<RectTransform>();
             resizeRect.anchorMin = new Vector2(0f, 1f);
             resizeRect.anchorMax = new Vector2(0f, 1f);
             resizeRect.pivot = new Vector2(0f, 1f);
             resizeRect.anchoredPosition = new Vector2(4f, -4f);
-            // Wire resize button to controller
-            var resizeBtnComp = resizeBtn.GetComponent<UnityEngine.UI.Button>();
-            if (resizeBtnComp != null)
-            {
-                UnityEditor.Events.UnityEventTools.RemovePersistentListener(resizeBtnComp.onClick, 0);
-                UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(resizeBtnComp.onClick, ctrl.ToggleSize);
-            }
+            ctrl.resizeBtn = resizeBtn.GetComponent<UnityEngine.UI.Button>();
 
             // Nudge buttons (< and >) between offset label and image
             var nudgeContainer = EnsureChild(panelGo.transform, "NudgeButtons");

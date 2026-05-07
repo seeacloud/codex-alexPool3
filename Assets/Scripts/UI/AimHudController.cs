@@ -41,6 +41,7 @@ namespace PoolAimTrainer.UI
         [Header("Nudge & Resize")]
         public UnityEngine.UI.Button nudgeLeftBtn;
         public UnityEngine.UI.Button nudgeRightBtn;
+        public UnityEngine.UI.Button resizeBtn;
         [Tooltip("每次微调偏移量（毫米）")]
         public float nudgeStepMm = 0.5f;
         [Tooltip("HUD 面板 RectTransform（用于放大/缩小）")]
@@ -60,6 +61,7 @@ namespace PoolAimTrainer.UI
             if (offsetLabel != null) offsetLabel.text = "dx = 0.0 mm";
             if (nudgeLeftBtn != null) nudgeLeftBtn.onClick.AddListener(() => NudgeAim(-nudgeStepMm));
             if (nudgeRightBtn != null) nudgeRightBtn.onClick.AddListener(() => NudgeAim(+nudgeStepMm));
+            if (resizeBtn != null) resizeBtn.onClick.AddListener(ToggleSize);
         }
 
         void LateUpdate()
