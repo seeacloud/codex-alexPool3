@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using PoolAimTrainer.Core;
 using PoolAimTrainer.SceneObjects;
 
@@ -30,6 +31,10 @@ namespace PoolAimTrainer.Interaction
         {
             if (InputRouter.PrimaryDown)
             {
+                // If pointer is over UI (HUD, buttons), don't process table interactions.
+                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                    return;
+
                 Ray r = cam.ScreenPointToRay(InputRouter.PrimaryScreenPosition);
                 if (tablePlane.Raycast(r, out float t))
                 {

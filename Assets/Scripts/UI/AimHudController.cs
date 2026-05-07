@@ -46,10 +46,14 @@ namespace PoolAimTrainer.UI
         public float nudgeStepMm = 0.5f;
         [Tooltip("HUD 面板 RectTransform（用于放大/缩小）")]
         public RectTransform panelRect;
-        public Vector2 sizeSmall = new Vector2(320f, 340f);
-        public Vector2 sizeLarge = new Vector2(640f, 660f);
+        public Vector2 sizeSmall = new Vector2(360f, 440f);
+        public Vector2 sizeLarge = new Vector2(640f, 720f);
+        public Vector2 sizeHidden = new Vector2(60f, 60f);
         public KeyCode resizeKey = KeyCode.H;
-        bool isLarge;
+        int hudState; // 0=normal, 1=large, 2=hidden
+
+        [Tooltip("HUD 内容容器（隐藏态时隐藏它，只留 resize 按钮）")]
+        public GameObject hudContent;
 
         Vector2 lastClickNormalized = new Vector2(0.5f, 0.5f);
         bool hasClicked;
@@ -185,8 +189,13 @@ namespace PoolAimTrainer.UI
         public void ToggleSize()
         {
             if (panelRect == null) return;
-            isLarge = !isLarge;
-            panelRect.sizeDelta = isLarge ? sizeLarge : sizeSmall;
+            hudState = (hudState + 1) % 3;
+            switch (hudState)
+            {
+                case 0: panelRect.sizeDelta = sizeSmall; if (hudContent != null) hudContent.SetActive(true); break;
+                case 1: panelRect.sizeDelta = sizeLarge; if (hudContent != null) hudContent.SetActive(true); break;
+                case 2: panelRect.sizeDelta = sizeHidden; if (hudContent != null) hudContent.SetActive(false); break;
+            }
         }
     }
 }

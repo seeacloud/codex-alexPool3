@@ -179,6 +179,24 @@ namespace PoolAimTrainer.EditorTools
             resizeRect.anchoredPosition = new Vector2(4f, -4f);
             ctrl.resizeBtn = resizeBtn.GetComponent<UnityEngine.UI.Button>();
 
+            // Wrap all content (except resize button) in a container for hide/show.
+            var contentGo = EnsureChild(panelGo.transform, "HudContent");
+            var contentRect = contentGo.GetComponent<RectTransform>();
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.offsetMin = Vector2.zero;
+            contentRect.offsetMax = Vector2.zero;
+            // Reparent existing children under HudContent (except BtnResize and HudContent itself)
+            var toReparent = new System.Collections.Generic.List<Transform>();
+            foreach (Transform child in panelGo.transform)
+            {
+                if (child.name == "BtnResize" || child.name == "HudContent") continue;
+                toReparent.Add(child);
+            }
+            foreach (var child in toReparent)
+                child.SetParent(contentGo.transform, true);
+            ctrl.hudContent = contentGo;
+
             // Nudge buttons (< and >) between offset label and image
             var nudgeContainer = EnsureChild(panelGo.transform, "NudgeButtons");
             var nudgeRect = nudgeContainer.GetComponent<RectTransform>();
