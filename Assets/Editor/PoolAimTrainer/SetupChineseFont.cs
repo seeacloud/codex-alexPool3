@@ -42,9 +42,7 @@ namespace PoolAimTrainer.EditorTools
 
             if (chosenSource == null)
             {
-                EditorUtility.DisplayDialog("No Chinese font found",
-                    "Could not locate a Chinese font under C:/Windows/Fonts/. Please download a Chinese TTF (e.g. Source Han Sans), put it in Assets/Fonts/, then try again.",
-                    "OK");
+            UnityEngine.Debug.Log("[Editor] " + "No Chinese font found" + ": " + "Could not locate a Chinese font under C:/Windows/Fonts/. Please download a Chinese TTF (e.g. Source Han Sans), put it in Assets/Fonts/, then try again.");
                 return;
             }
             Debug.Log($"[SetupChineseFont] Using source font: {chosenSource}");
@@ -61,9 +59,7 @@ namespace PoolAimTrainer.EditorTools
             var font = AssetDatabase.LoadAssetAtPath<Font>(destTtf);
             if (font == null)
             {
-                EditorUtility.DisplayDialog("Font import failed",
-                    $"Unity did not import {destTtf} as a Font. Try manually re-importing via Project view right-click > Reimport.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Font import failed" + ": " + $"Unity did not import {destTtf} as a Font. Try manually re-importing via Project view right-click > Reimport.");
                 return;
             }
             Debug.Log($"[SetupChineseFont] Font loaded: {font.name}");
@@ -85,8 +81,30 @@ namespace PoolAimTrainer.EditorTools
                 atlasHeight: 2048,
                 atlasPopulationMode: AtlasPopulationMode.Dynamic);
             AssetDatabase.CreateAsset(tmpAsset, TargetAssetPath);
+
+            // CRITICAL: TMP_FontAsset internally creates a Material and Atlas Texture
+            // at runtime. These must be saved as sub-assets of the .asset file,
+            // otherwise after serialization the material/m_AtlasTextures references
+            // become null → MissingReferenceException at render time.
+            if (tmpAsset.material != null)
+            {
+                tmpAsset.material.name = "Chinese_TMP Material";
+                AssetDatabase.AddObjectToAsset(tmpAsset.material, tmpAsset);
+            }
+            if (tmpAsset.atlasTextures != null)
+            {
+                for (int i = 0; i < tmpAsset.atlasTextures.Length; i++)
+                {
+                    var tex = tmpAsset.atlasTextures[i];
+                    if (tex == null) continue;
+                    tex.name = "Chinese_TMP Atlas " + i;
+                    AssetDatabase.AddObjectToAsset(tex, tmpAsset);
+                }
+            }
+
             AssetDatabase.SaveAssets();
-            Debug.Log($"[SetupChineseFont] Created fresh TMP asset at {TargetAssetPath} (2048x2048 atlas)");
+            AssetDatabase.ImportAsset(TargetAssetPath);
+            Debug.Log($"[SetupChineseFont] Created fresh TMP asset at {TargetAssetPath} with material+atlas as sub-assets");
 
             AddToTmpFallbacks(tmpAsset);
 
@@ -110,9 +128,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                $"Imported: {Path.GetFileName(chosenSource)}\nReassigned {reassigned} TMP_Text(s) to Chinese font.\n\nPress Play — Chinese characters should now render correctly.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + $"Imported: {Path.GetFileName(chosenSource)}\nReassigned {reassigned} TMP_Text(s) to Chinese font.\n\nPress Play — Chinese characters should now render correctly.");
         }
 
         static void AddToTmpFallbacks(TMP_FontAsset fontAsset)

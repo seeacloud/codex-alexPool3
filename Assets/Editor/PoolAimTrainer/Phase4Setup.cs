@@ -32,16 +32,13 @@ namespace PoolAimTrainer.EditorTools
             var vis = GameObject.Find("_Visualization");
             if (gm == null || vis == null)
             {
-                EditorUtility.DisplayDialog("Missing",
-                    "_GameManager or _Visualization not found. Run Session C first.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "_GameManager or _Visualization not found. Run Session C first.");
                 return;
             }
             var aim = gm.GetComponent<AimManager>();
             if (aim == null)
             {
-                EditorUtility.DisplayDialog("Missing AimManager",
-                    "AimManager not found on _GameManager.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing AimManager" + ": " + "AimManager not found on _GameManager.");
                 return;
             }
 
@@ -68,9 +65,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "Phase 4 ready: HiddenSceneManager + ShotSimulator + TargetBallEndRenderer wired. Press Play and drag balls to see the green final-position ghost.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "Phase 4 ready: HiddenSceneManager + ShotSimulator + TargetBallEndRenderer wired. Press Play and drag balls to see the green final-position ghost.");
         }
 
         static Material CreateTransparentURPMaterial(Color color, string path)

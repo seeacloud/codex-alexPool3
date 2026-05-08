@@ -26,16 +26,14 @@ namespace PoolAimTrainer.EditorTools
             var table = GameObject.Find("Pool-Table");
             if (table == null)
             {
-                EditorUtility.DisplayDialog("Missing", "Pool-Table not found in scene.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "Pool-Table not found in scene.");
                 return;
             }
 
             var fbx = CollectFbxPockets(table.transform);
             if (fbx.Count < 6)
             {
-                EditorUtility.DisplayDialog("Not enough FBX pockets",
-                    $"Expected 6 FBX pocket children under Pool-Table, found {fbx.Count}.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Not enough FBX pockets" + ": " + $"Expected 6 FBX pocket children under Pool-Table, found {fbx.Count}.");
                 return;
             }
 
@@ -79,10 +77,9 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
+            UnityEngine.Debug.Log("[Editor] Done: " +
                 $"Applied {applied}/6 pockets numbered 1..6. " +
-                (tc != null ? $"Bounds: halfLength={tc.playfieldHalfLength:F3}, halfWidth={tc.playfieldHalfWidth:F3}." : ""),
-                "OK");
+                (tc != null ? $"Bounds: halfLength={tc.playfieldHalfLength:F3}, halfWidth={tc.playfieldHalfWidth:F3}." : ""));
         }
 
         static List<Transform> CollectFbxPockets(Transform tableRoot)

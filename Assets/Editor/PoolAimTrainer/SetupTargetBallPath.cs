@@ -17,9 +17,7 @@ namespace PoolAimTrainer.EditorTools
             var gm = GameObject.Find("_GameManager");
             if (vis == null || gm == null)
             {
-                EditorUtility.DisplayDialog("Missing",
-                    "_Visualization or _GameManager not found. Run Session C + Phase 4 first.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "_Visualization or _GameManager not found. Run Session C + Phase 4 first.");
                 return;
             }
 
@@ -38,9 +36,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "TargetBallPath wired (GL.LINES rendering). Press Play and drag balls.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "TargetBallPath wired (GL.LINES rendering). Press Play and drag balls.");
         }
     }
 }

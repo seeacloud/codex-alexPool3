@@ -19,8 +19,7 @@ namespace PoolAimTrainer.EditorTools
             var gm = GameObject.Find("_GameManager");
             if (gm == null)
             {
-                EditorUtility.DisplayDialog("Missing",
-                    "_GameManager not found. Run Session C first.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "_GameManager not found. Run Session C first.");
                 return;
             }
             if (gm.GetComponent<PocketLabelToggle>() == null)
@@ -30,9 +29,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "PocketLabelToggle attached. Press L at runtime to toggle pocket number labels.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "PocketLabelToggle attached. Press L at runtime to toggle pocket number labels.");
         }
     }
 }

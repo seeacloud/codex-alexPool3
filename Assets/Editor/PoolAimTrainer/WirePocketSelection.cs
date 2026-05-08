@@ -23,16 +23,14 @@ namespace PoolAimTrainer.EditorTools
             var gm = GameObject.Find("_GameManager");
             if (im == null || gm == null)
             {
-                EditorUtility.DisplayDialog("Missing object",
-                    "_InputManager or _GameManager not found. Run Sessions B and C first.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing object" + ": " + "_InputManager or _GameManager not found. Run Sessions B and C first.");
                 return;
             }
             var drag = im.GetComponent<DragInput>();
             var aim = gm.GetComponent<AimManager>();
             if (drag == null || aim == null)
             {
-                EditorUtility.DisplayDialog("Missing component",
-                    "DragInput or AimManager missing. Run Sessions B and C first.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing component" + ": " + "DragInput or AimManager missing. Run Sessions B and C first.");
                 return;
             }
             drag.aimManager = aim;
@@ -42,9 +40,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "DragInput.aimManager linked. Play, then click a pocket's yellow indicator to lock it as the target.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "DragInput.aimManager linked. Play, then click a pocket's yellow indicator to lock it as the target.");
         }
     }
 }

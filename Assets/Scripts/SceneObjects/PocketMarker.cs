@@ -18,6 +18,7 @@ namespace PoolAimTrainer.SceneObjects
         public float labelHeight = 0.08f;
 
         public static bool LabelsVisible = true;
+        public static bool IndicatorsVisible = false;
 
         public static void SetLabelsVisible(bool visible)
         {
@@ -26,6 +27,16 @@ namespace PoolAimTrainer.SceneObjects
             {
                 var labelT = pm.transform.Find("Label");
                 if (labelT != null) labelT.gameObject.SetActive(visible);
+            }
+        }
+
+        public static void SetIndicatorsVisible(bool visible)
+        {
+            IndicatorsVisible = visible;
+            foreach (var pm in FindObjectsOfType<PocketMarker>())
+            {
+                var ind = pm.transform.Find("Indicator");
+                if (ind != null) ind.gameObject.SetActive(visible);
             }
         }
 
@@ -39,6 +50,9 @@ namespace PoolAimTrainer.SceneObjects
             EnsureIndicator();
             EnsureLabel();
             SetHighlighted(false);
+            // Honor the global toggle on spawn.
+            var indT = transform.Find("Indicator");
+            if (indT != null) indT.gameObject.SetActive(IndicatorsVisible);
         }
 
         void LateUpdate()

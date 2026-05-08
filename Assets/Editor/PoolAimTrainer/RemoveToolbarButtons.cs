@@ -30,7 +30,7 @@ namespace PoolAimTrainer.EditorTools
                 EditorSceneManager.SaveScene(scene);
             }
 
-            EditorUtility.DisplayDialog("Done", $"Removed {removed} toolbar buttons.", "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + $"Removed {removed} toolbar buttons.");
         }
     }
 }

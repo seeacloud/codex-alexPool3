@@ -21,6 +21,9 @@ namespace PoolAimTrainer.Core
         public TargetBallEndRenderer endRenderer;
         public TargetBallPathRenderer pathRenderer;
         public CueBallPathRenderer cuePathRenderer;
+        public CueThroughTargetLineRenderer cueThroughTargetRenderer;
+        public CutAngleArcRenderer cutAngleArcRenderer;
+        public AimVsTargetArcRenderer aimVsTargetArcRenderer;
         [Tooltip("两次隐藏场景仿真之间最小间隔（秒）")]
         public float simThrottleSeconds = 0.05f;
 
@@ -75,6 +78,36 @@ namespace PoolAimTrainer.Core
             userSelectedPocket = null;
         }
 
+        void Awake()
+        {
+            AutoWireCueThroughTarget();
+        }
+
+        void AutoWireCueThroughTarget()
+        {
+            if (cueThroughTargetRenderer != null && cutAngleArcRenderer != null && aimVsTargetArcRenderer != null) return;
+            GameObject host = GameObject.Find("_Visualization");
+            if (host == null) host = gameObject;
+            if (cueThroughTargetRenderer == null)
+            {
+                cueThroughTargetRenderer = host.GetComponent<CueThroughTargetLineRenderer>();
+                if (cueThroughTargetRenderer == null)
+                    cueThroughTargetRenderer = host.AddComponent<CueThroughTargetLineRenderer>();
+            }
+            if (cutAngleArcRenderer == null)
+            {
+                cutAngleArcRenderer = host.GetComponent<CutAngleArcRenderer>();
+                if (cutAngleArcRenderer == null)
+                    cutAngleArcRenderer = host.AddComponent<CutAngleArcRenderer>();
+            }
+            if (aimVsTargetArcRenderer == null)
+            {
+                aimVsTargetArcRenderer = host.GetComponent<AimVsTargetArcRenderer>();
+                if (aimVsTargetArcRenderer == null)
+                    aimVsTargetArcRenderer = host.AddComponent<AimVsTargetArcRenderer>();
+            }
+        }
+
         void Update()
         {
             if (cueBall == null || targetBall == null || table == null) return;
@@ -91,6 +124,7 @@ namespace PoolAimTrainer.Core
             {
                 UpdatePocketHighlight();
                 Recompute();
+                UpdateCueThroughTarget();
                 RememberPositions();
                 simDirty = true;
             }
@@ -156,6 +190,37 @@ namespace PoolAimTrainer.Core
                     cuePathRenderer.Hide();
                 }
             }
+
+            // Arc + label for angle between blue (manual aim) and red (cue→target).
+            // Only meaningful when user has set a manual aim direction.
+            if (aimVsTargetArcRenderer != null)
+            {
+                if (hasManualAim && manualAimDir.sqrMagnitude > 1e-6f)
+                {
+                    aimVsTargetArcRenderer.Show(cueBall.Center, targetBall.Center, manualAimDir.normalized);
+                }
+                else
+                {
+                    aimVsTargetArcRenderer.Hide();
+                }
+            }
+        }
+
+        void UpdateCueThroughTarget()
+        {
+            AutoWireCueThroughTarget();
+            if (cueThroughTargetRenderer == null) return;
+            Vector3 cue = cueBall.Center;
+            Vector3 tgt = targetBall.Center;
+            Vector3 dir = tgt - cue;
+            if (dir.sqrMagnitude < 1e-6f)
+            {
+                cueThroughTargetRenderer.Hide();
+                return;
+            }
+            dir = dir.normalized;
+            Vector3 railHit = ClipRayAtTable(tgt, dir, table);
+            cueThroughTargetRenderer.Show(cue, tgt, railHit);
         }
 
         static Vector3 ClipRayAtTable(Vector3 start, Vector3 dir, TableController table)
@@ -236,6 +301,7 @@ namespace PoolAimTrainer.Core
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();
                 if (aimLineRenderer != null) aimLineRenderer.Hide();
+                if (cutAngleArcRenderer != null) cutAngleArcRenderer.Hide();
                 if (hintPanel != null) hintPanel.Clear();
                 return;
             }
@@ -243,6 +309,7 @@ namespace PoolAimTrainer.Core
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();
                 if (aimLineRenderer != null) aimLineRenderer.Hide();
+                if (cutAngleArcRenderer != null) cutAngleArcRenderer.Hide();
                 if (hintPanel != null) hintPanel.Clear();
                 return;
             }
@@ -252,12 +319,15 @@ namespace PoolAimTrainer.Core
             {
                 if (ghostRenderer != null) ghostRenderer.Hide();
                 if (aimLineRenderer != null) aimLineRenderer.Hide();
+                if (cutAngleArcRenderer != null) cutAngleArcRenderer.Hide();
                 if (hintPanel != null) hintPanel.Clear();
                 return;
             }
             if (ghostRenderer != null) ghostRenderer.Show(r.ghostBallCenter);
             if (aimLineRenderer != null)
                 aimLineRenderer.Show(r.aimLineStart, r.aimLineEnd, r.objectBallToPocketStart, r.objectBallToPocketEnd);
+            if (cutAngleArcRenderer != null)
+                cutAngleArcRenderer.Show(cueBall.Center, targetBall.Center, currentPocket.Position);
             float offsetM = ComputeOffsetCm(r, table.ballRadius);
             var side = DetermineAimSide(r);
             if (hintPanel != null) hintPanel.Clear();

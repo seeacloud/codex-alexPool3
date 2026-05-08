@@ -31,16 +31,14 @@ namespace PoolAimTrainer.EditorTools
             var table = GameObject.Find("Pool-Table");
             if (table == null)
             {
-                EditorUtility.DisplayDialog("Pool-Table missing",
-                    "Run 'Setup Session A Scene' first.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Pool-Table missing" + ": " + "Run 'Setup Session A Scene' first.");
                 return;
             }
 
             Bounds? b = ComputeWorldBounds(table);
             if (b == null)
             {
-                EditorUtility.DisplayDialog("No renderers",
-                    "Pool-Table has no Renderer components; cannot measure bounds.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "No renderers" + ": " + "Pool-Table has no Renderer components; cannot measure bounds.");
                 return;
             }
             var bounds = b.Value;
@@ -103,10 +101,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog(
-                "Fixed",
-                $"Measured table X = {measuredLength:F3}, target = {targetLength:F3}, applied factor = {factor:F4}.\nBalls at expected positions. Press Play to verify proportions.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Fixed" + ": " + $"Measured table X = {measuredLength:F3}, target = {targetLength:F3}, applied factor = {factor:F4}.\nBalls at expected positions. Press Play to verify proportions.");
         }
 
         static Bounds? ComputeWorldBounds(GameObject go)

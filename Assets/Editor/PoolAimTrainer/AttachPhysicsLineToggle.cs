@@ -22,9 +22,7 @@ namespace PoolAimTrainer.EditorTools
             var vis = GameObject.Find("_Visualization");
             if (gm == null || vis == null)
             {
-                EditorUtility.DisplayDialog("Missing",
-                    "_GameManager or _Visualization not found. Run Session C + Phase 4 first.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "_GameManager or _Visualization not found. Run Session C + Phase 4 first.");
                 return;
             }
 
@@ -37,9 +35,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "PhysicsLineToggle attached. Press V at runtime to toggle orange+blue lines.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "PhysicsLineToggle attached. Press V at runtime to toggle orange+blue lines.");
         }
     }
 }

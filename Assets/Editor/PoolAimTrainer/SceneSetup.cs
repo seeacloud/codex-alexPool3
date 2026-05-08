@@ -37,8 +37,7 @@ namespace PoolAimTrainer.EditorTools
             var tableFbx = AssetDatabase.LoadAssetAtPath<GameObject>(TableFbxPath);
             if (tableFbx == null)
             {
-                EditorUtility.DisplayDialog("Missing asset",
-                    $"Pool-Table FBX not found at {TableFbxPath}. Aborting.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing asset" + ": " + $"Pool-Table FBX not found at {TableFbxPath}. Aborting.");
                 return;
             }
 
@@ -71,9 +70,7 @@ namespace PoolAimTrainer.EditorTools
             }
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorUtility.DisplayDialog("Done",
-                "MainScene created at Assets/Scenes/MainScene.unity with table, 6 pockets, CueBall, TargetBall.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "MainScene created at Assets/Scenes/MainScene.unity with table, 6 pockets, CueBall, TargetBall.");
         }
 
         static void CreatePocket(string name, Transform parent, Vector3 localPos)

@@ -61,7 +61,14 @@ namespace PoolAimTrainer.Trajectory
             {
                 result.state = TargetBallEndState.InPocket;
                 result.pocketHitPos = table.Pockets[pocketIdx].Position;
-                result.targetBallEndPos = result.pocketHitPos;
+                // End position = where the target ball center is at the moment
+                // it enters the pocket's catch radius. Because the pocket is
+                // larger than the ball, different approach angles lead to
+                // different entry points — don't collapse all of them to
+                // pocket center.
+                Vector3 capturePoint = targetPos + targetDir * tPocket;
+                capturePoint.y = ballRadius;
+                result.targetBallEndPos = capturePoint;
             }
             else
             {
@@ -70,6 +77,7 @@ namespace PoolAimTrainer.Trajectory
                 result.state = TargetBallEndState.AgainstRail;
                 result.targetBallEndPos = endCenter;
             }
+
             result.targetBallTrajectory = new[] { targetPos, result.targetBallEndPos };
 
             // Cue ball path: cue → ghost, then perpendicular deflection.

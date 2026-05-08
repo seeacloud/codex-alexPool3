@@ -25,7 +25,7 @@ namespace PoolAimTrainer.EditorTools
             var canvas = Object.FindObjectOfType<Canvas>();
             if (canvas == null)
             {
-                EditorUtility.DisplayDialog("Missing", "No Canvas found.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "No Canvas found.");
                 return;
             }
 
@@ -37,8 +37,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "Unified UI created: left toolbar + auto-sized right panel.", "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "Unified UI created: left toolbar + auto-sized right panel.");
         }
 
         static void CleanOldUI()

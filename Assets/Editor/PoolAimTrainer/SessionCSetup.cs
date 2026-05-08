@@ -37,8 +37,7 @@ namespace PoolAimTrainer.EditorTools
             var target = GameObject.Find("TargetBall");
             if (table == null || cue == null || target == null)
             {
-                EditorUtility.DisplayDialog("Scene not ready",
-                    "Missing Pool-Table / CueBall / TargetBall. Run Sessions A + B first.", "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Scene not ready" + ": " + "Missing Pool-Table / CueBall / TargetBall. Run Sessions A + B first.");
                 return;
             }
             var tc = table.GetComponent<TableController>();
@@ -79,9 +78,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                "Visualization layer ready: GhostBallRenderer, AimLineRenderer, HintPanel, AimManager all wired. Press Play.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "Visualization layer ready: GhostBallRenderer, AimLineRenderer, HintPanel, AimManager all wired. Press Play.");
         }
 
         static Material CreateTransparentURPMaterial(Color color, string path)

@@ -55,9 +55,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
-            EditorUtility.DisplayDialog("Done",
-                $"Fixed {fixedCount} pockets to real-world corner/mid positions.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + $"Fixed {fixedCount} pockets to real-world corner/mid positions.");
         }
 
         static Vector3 SafeParentScale(Transform t)

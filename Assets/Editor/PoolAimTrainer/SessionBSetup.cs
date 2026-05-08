@@ -21,9 +21,7 @@ namespace PoolAimTrainer.EditorTools
             var table = GameObject.Find("Pool-Table");
             if (table == null)
             {
-                EditorUtility.DisplayDialog("Missing Pool-Table",
-                    "Run 'Setup Session A Scene' first to create Pool-Table in the scene.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "Missing Pool-Table" + ": " + "Run 'Setup Session A Scene' first to create Pool-Table in the scene.");
                 return;
             }
 
@@ -42,9 +40,7 @@ namespace PoolAimTrainer.EditorTools
             var cam = Camera.main;
             if (cam == null)
             {
-                EditorUtility.DisplayDialog("No Main Camera",
-                    "No Camera with tag 'MainCamera' found in the scene. Aborting.",
-                    "OK");
+                UnityEngine.Debug.Log("[Editor] " + "No Main Camera" + ": " + "No Camera with tag 'MainCamera' found in the scene. Aborting.");
                 return;
             }
             var orbit = cam.GetComponent<CameraOrbit>();
@@ -55,9 +51,7 @@ namespace PoolAimTrainer.EditorTools
             EditorSceneManager.MarkSceneDirty(activeScene);
             EditorSceneManager.SaveScene(activeScene);
 
-            EditorUtility.DisplayDialog("Done",
-                "DragInput attached to _InputManager and CameraOrbit attached to Main Camera (pivot = Pool-Table). Press Play to test.",
-                "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "DragInput attached to _InputManager and CameraOrbit attached to Main Camera (pivot = Pool-Table). Press Play to test.");
         }
     }
 }

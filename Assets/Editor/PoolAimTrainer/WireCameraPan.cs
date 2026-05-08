@@ -17,19 +17,19 @@ namespace PoolAimTrainer.EditorTools
         public static void Wire()
         {
             var im = GameObject.Find("_InputManager");
-            if (im == null) { EditorUtility.DisplayDialog("Missing", "_InputManager not found.", "OK"); return; }
+            if (im == null) { UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "_InputManager not found."); return; }
             var drag = im.GetComponent<DragInput>();
-            if (drag == null) { EditorUtility.DisplayDialog("Missing", "DragInput not found.", "OK"); return; }
+            if (drag == null) { UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "DragInput not found."); return; }
             var cam = Camera.main;
-            if (cam == null) { EditorUtility.DisplayDialog("Missing", "Main Camera not found.", "OK"); return; }
+            if (cam == null) { UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "Main Camera not found."); return; }
             var orbit = cam.GetComponent<CameraOrbit>();
-            if (orbit == null) { EditorUtility.DisplayDialog("Missing", "CameraOrbit not found on Main Camera.", "OK"); return; }
+            if (orbit == null) { UnityEngine.Debug.Log("[Editor] " + "Missing" + ": " + "CameraOrbit not found on Main Camera."); return; }
             drag.cameraOrbit = orbit;
             EditorUtility.SetDirty(drag);
             var scene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            EditorUtility.DisplayDialog("Done", "DragInput.cameraOrbit wired. Left-drag on empty table area now pans the camera.", "OK");
+            UnityEngine.Debug.Log("[Editor] " + "Done" + ": " + "DragInput.cameraOrbit wired. Left-drag on empty table area now pans the camera.");
         }
     }
 }
