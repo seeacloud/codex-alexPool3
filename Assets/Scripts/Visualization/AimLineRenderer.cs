@@ -1,4 +1,5 @@
 using UnityEngine;
+using PoolAimTrainer.Core;
 
 namespace PoolAimTrainer.Visualization
 {
@@ -20,8 +21,15 @@ namespace PoolAimTrainer.Visualization
 
         public void Show(Vector3 cue, Vector3 ghost, Vector3 obj, Vector3 pocket)
         {
-            SetLine(lrCueToGhost, cue, ghost);
-            SetLine(lrObjToPocket, obj, pocket);
+            if (ReferenceLineVisibility.IsLayerVisible(ReferenceVisualLayer.CueToGhost))
+                SetLine(lrCueToGhost, cue, ghost);
+            else
+                HideLine(lrCueToGhost);
+
+            if (ReferenceLineVisibility.IsLayerVisible(ReferenceVisualLayer.ObjectToPocket))
+                SetLine(lrObjToPocket, obj, pocket);
+            else
+                HideLine(lrObjToPocket);
         }
 
         public void Hide()

@@ -17,8 +17,9 @@ namespace PoolAimTrainer.Trajectory
     /// crosses the radius-shrunken mouth opening without first entering a rounded
     /// jaw-tip clearance circle.
     ///
-    /// Whichever fires first wins. "Pocketed" iff pocket hit happens before any
-    /// cushion segment hit.
+    /// Whichever physical contact fires first becomes the displayed farthest
+    /// reachable target-ball center. Pocket entry is no longer classified here;
+    /// this predictor is used as a visual training aid rather than a rules engine.
     /// </summary>
     public class ShotSimulator : MonoBehaviour
     {
@@ -85,6 +86,13 @@ namespace PoolAimTrainer.Trajectory
             float tImpact = b - Mathf.Sqrt(discriminant);
             Vector3 ghostPos = cuePos + aimDir * tImpact; ghostPos.y = ballRadius;
             Vector3 targetDir = (targetPos - ghostPos); targetDir.y = 0f; targetDir.Normalize();
+            Vector3 contactPoint = targetPos - targetDir * ballRadius;
+            contactPoint.y = ballRadius;
+
+            result.hasBallCollision = true;
+            result.collisionCueBallCenter = ghostPos;
+            result.collisionTargetBallCenter = targetPos;
+            result.collisionContactPoint = contactPoint;
 
             float tEnd = FirstTargetTravelLimit(targetPos, targetDir, ballRadius, out int pocketIdx);
             Vector3 endCenter = targetPos + targetDir * tEnd;

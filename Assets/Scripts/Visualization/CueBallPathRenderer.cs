@@ -1,4 +1,5 @@
 using UnityEngine;
+using PoolAimTrainer.Core;
 
 namespace PoolAimTrainer.Visualization
 {
@@ -19,6 +20,12 @@ namespace PoolAimTrainer.Visualization
 
         public void Show(Vector3[] trajectory)
         {
+            if (!ReferenceLineVisibility.IsLayerVisible(ReferenceVisualLayer.ManualCuePath))
+            {
+                Hide();
+                return;
+            }
+
             if (trajectory == null || trajectory.Length < 2)
             {
                 Hide();

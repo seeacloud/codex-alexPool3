@@ -18,5 +18,9 @@ namespace PoolAimTrainer.Trajectory
         public Vector3 pocketHitPos;
         public Vector3[] targetBallTrajectory;
         public Vector3[] cueBallTrajectory;
+        public bool hasBallCollision;
+        public Vector3 collisionCueBallCenter;
+        public Vector3 collisionTargetBallCenter;
+        public Vector3 collisionContactPoint;
     }
 }

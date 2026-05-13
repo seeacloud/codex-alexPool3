@@ -1,4 +1,5 @@
 using UnityEngine;
+using PoolAimTrainer.Core;
 
 namespace PoolAimTrainer.Visualization
 {
@@ -22,6 +23,12 @@ namespace PoolAimTrainer.Visualization
 
         public void Show(Vector3 cuePos, Vector3 targetPos, Vector3 railHitPos)
         {
+            if (!ReferenceLineVisibility.IsLayerVisible(ReferenceVisualLayer.CueThroughTarget))
+            {
+                Hide();
+                return;
+            }
+
             if (lr == null) return;
             lr.enabled = true;
             lr.positionCount = 3;

@@ -9,11 +9,16 @@ namespace PoolAimTrainer.UI
         public KeyCode shortcutKey = KeyCode.G;
 
         UnityEngine.UI.Button btn;
+        UnityEngine.UI.Toggle toggle;
+        bool refreshing;
 
         void Start()
         {
             btn = GetComponent<UnityEngine.UI.Button>();
             if (btn != null) btn.onClick.AddListener(Toggle);
+            toggle = GetComponent<UnityEngine.UI.Toggle>();
+            if (toggle != null) toggle.onValueChanged.AddListener(SetVisible);
+            UpdateLabel();
         }
 
         void Update()
@@ -24,17 +29,29 @@ namespace PoolAimTrainer.UI
         void Toggle()
         {
             if (aimManager == null) return;
-            aimManager.showGhostAndAimLines = !aimManager.showGhostAndAimLines;
+            SetVisible(!aimManager.showGhostBall);
+        }
+
+        void SetVisible(bool visible)
+        {
+            if (refreshing || aimManager == null) return;
+            aimManager.showGhostBall = visible;
             aimManager.ForceRefresh();
             UpdateLabel();
         }
 
         void UpdateLabel()
         {
-            if (btn == null) return;
-            var txt = btn.GetComponentInChildren<TMPro.TMP_Text>();
+            if (aimManager == null) return;
+
+            refreshing = true;
+            if (toggle != null)
+                toggle.SetIsOnWithoutNotify(aimManager.showGhostBall);
+            refreshing = false;
+
+            var txt = GetComponentInChildren<TMPro.TMP_Text>();
             if (txt != null)
-                txt.text = aimManager.showGhostAndAimLines ? "Ghost ON" : "Ghost OFF";
+                txt.text = aimManager.showGhostBall ? "Ghost ON" : "Ghost OFF";
         }
     }
 }

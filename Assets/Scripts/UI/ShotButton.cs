@@ -1,7 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using PoolAimTrainer.Core;
-using PoolAimTrainer.GeometryCore;
 using PoolAimTrainer.SceneObjects;
 using PoolAimTrainer.Trajectory;
 
@@ -48,9 +47,12 @@ namespace PoolAimTrainer.UI
             }
             else if (aimManager.currentPocket != null)
             {
-                var r = AimSolver.Compute(cueBall.Center, targetBall.Center, aimManager.currentPocket.Position, table.ballRadius);
-                if (!r.solvable) return;
-                aimDir = (r.ghostBallCenter - cueBall.Center).normalized;
+                Vector3 pottingPoint = aimManager.GetPottingPointFor(aimManager.currentPocket);
+                if (!AimManager.TryComputeDefaultAimDirection(
+                    cueBall.Center, targetBall.Center, pottingPoint, table.ballRadius, out aimDir))
+                {
+                    return;
+                }
             }
             else return;
 
@@ -80,8 +82,10 @@ namespace PoolAimTrainer.UI
                 if (aimManager.pathRenderer != null) aimManager.pathRenderer.Hide();
                 if (aimManager.cuePathRenderer != null) aimManager.cuePathRenderer.Hide();
                 if (aimManager.cueThroughTargetRenderer != null) aimManager.cueThroughTargetRenderer.Hide();
+                if (aimManager.estimatedAimLineRenderer != null) aimManager.estimatedAimLineRenderer.Hide();
                 if (aimManager.cutAngleArcRenderer != null) aimManager.cutAngleArcRenderer.Hide();
                 if (aimManager.aimVsTargetArcRenderer != null) aimManager.aimVsTargetArcRenderer.Hide();
+                if (aimManager.targetLineAngleArcRenderer != null) aimManager.targetLineAngleArcRenderer.Hide();
                 if (aimManager.endRenderer != null) aimManager.endRenderer.Hide();
             }
 

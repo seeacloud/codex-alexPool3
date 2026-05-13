@@ -9,8 +9,8 @@ namespace PoolAimTrainer.Visualization
 
         // Hard-coded dash style (not serialized) so all lines stay consistent
         // regardless of stale scene-serialized values.
-        const float dashLength = 0.015f;
-        const float gapLength = 0.015f;
+        const float dashLength = 0.01f;
+        const float gapLength = 0.005f;
 
         protected LineRenderer CreateDashLineRenderer(string name, Color color)
         {

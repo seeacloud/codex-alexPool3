@@ -113,11 +113,11 @@ namespace PoolAimTrainer.UI
             aimCamera.farClipPlane = Mathf.Max(2f, dist + 1f);
             EnsureRenderTexture();
 
-            if (hasClicked)
-            {
-                UpdateCrosshair();
-                UpdateOffsetLabel();
-            }
+            if (!hasClicked)
+                UpdateDefaultAimSelection();
+
+            UpdateCrosshair();
+            UpdateOffsetLabel();
         }
 
         void OnDestroy()
@@ -259,12 +259,35 @@ namespace PoolAimTrainer.UI
         {
             hasClicked = false;
             lastClickNormalized = new Vector2(0.5f, 0.5f);
-            if (crosshairHBar != null)
-                crosshairHBar.gameObject.SetActive(false);
-            if (crosshairVBar != null)
-                crosshairVBar.gameObject.SetActive(false);
             if (offsetLabel != null)
                 offsetLabel.text = "dx = 0.0 mm";
+        }
+
+        void UpdateDefaultAimSelection()
+        {
+            if (aimManager == null || aimCamera == null || rawImageRect == null || cueBall == null || targetBall == null)
+            {
+                lastClickNormalized = new Vector2(0.5f, 0.5f);
+                return;
+            }
+
+            if (aimManager.currentPocket == null || aimManager.table == null)
+            {
+                lastClickNormalized = new Vector2(0.5f, 0.5f);
+                return;
+            }
+
+            Vector3 pottingPoint = aimManager.GetPottingPointFor(aimManager.currentPocket);
+            var ideal = PoolAimTrainer.GeometryCore.AimSolver.Compute(
+                cueBall.Center, targetBall.Center, pottingPoint, aimManager.table.ballRadius);
+            if (!ideal.solvable)
+            {
+                lastClickNormalized = new Vector2(0.5f, 0.5f);
+                return;
+            }
+
+            Vector3 viewport = aimCamera.WorldToViewportPoint(ideal.ghostBallCenter);
+            lastClickNormalized = new Vector2(Mathf.Clamp01(viewport.x), 0.5f);
         }
 
         void UpdateOffsetLabel()

@@ -14,11 +14,16 @@ namespace PoolAimTrainer.Core
 
         public TargetBallPathRenderer targetPath;
         public CueBallPathRenderer cuePath;
+        public ReferenceLineVisibility referenceLineVisibility;
 
         bool visible;
 
         void Start()
         {
+            if (referenceLineVisibility == null)
+                referenceLineVisibility = ReferenceLineVisibility.Active
+                    ?? FindObjectOfType<ReferenceLineVisibility>();
+
             visible = startVisible;
             ApplyVisibility();
         }
@@ -34,6 +39,13 @@ namespace PoolAimTrainer.Core
 
         void ApplyVisibility()
         {
+            if (referenceLineVisibility != null)
+            {
+                referenceLineVisibility.SetLayerVisible(ReferenceVisualLayer.TargetBallPath, visible);
+                referenceLineVisibility.SetLayerVisible(ReferenceVisualLayer.ManualCuePath, visible);
+                return;
+            }
+
             if (targetPath != null) targetPath.gameObject.SetActive(visible);
             if (cuePath != null) cuePath.gameObject.SetActive(visible);
             if (!visible)

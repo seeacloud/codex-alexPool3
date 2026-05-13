@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
+using PoolAimTrainer.Core;
 using PoolAimTrainer.GeometryCore;
 
 namespace PoolAimTrainer.Tests.EditMode
@@ -90,6 +91,23 @@ namespace PoolAimTrainer.Tests.EditMode
             var r = AimSolver.Compute(cue, obj, pocket, R);
 
             Assert.That(r.solvable, Is.False);
+        }
+
+        [Test]
+        public void TryComputeDefaultAimDirection_AimsFromCueToGhostBallCenter()
+        {
+            var cue = new Vector3(0f, 0f, 0f);
+            var obj = new Vector3(1f, 0f, 0f);
+            var pocket = new Vector3(2f, 0f, 0f);
+            var ghost = AimSolver.ComputeGhostBallCenter(obj, pocket, R);
+
+            bool ok = AimManager.TryComputeDefaultAimDirection(cue, obj, pocket, R, out Vector3 dir);
+            Vector3 expected = (ghost - cue).normalized;
+
+            Assert.That(ok, Is.True);
+            Assert.That(dir.x, Is.EqualTo(expected.x).Within(1e-5f));
+            Assert.That(dir.y, Is.EqualTo(expected.y).Within(1e-5f));
+            Assert.That(dir.z, Is.EqualTo(expected.z).Within(1e-5f));
         }
     }
 }
