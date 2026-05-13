@@ -9,6 +9,7 @@ namespace PoolAimTrainer.SceneObjects
         public float pocketRadius = 0.06f;
         public Color normalColor = new Color(1f, 0.85f, 0.2f, 1f);
         public Color highlightColor = new Color(0.2f, 1f, 0.3f, 1f);
+        public Color targetMarkerColor = new Color(0.1f, 1f, 0.85f, 0.9f);
         [Tooltip("运行时指示器相对袋口的缩放倍数")]
         public float indicatorScaleMultiplier = 1.4f;
 
@@ -41,14 +42,20 @@ namespace PoolAimTrainer.SceneObjects
         }
 
         Renderer indicatorRenderer;
+        GameObject targetMarker;
         TextMeshPro labelText;
+        TextMeshPro targetLabelText;
 
         public Vector3 Position => transform.position;
+        public bool IsTargetMarked => targetMarker != null && targetMarker.activeSelf;
+
+        const int TargetRingSegments = 48;
 
         void Start()
         {
             EnsureIndicator();
             EnsureLabel();
+            EnsureTargetMarker();
             SetHighlighted(false);
             // Honor the global toggle on spawn.
             var indT = transform.Find("Indicator");
@@ -62,6 +69,11 @@ namespace PoolAimTrainer.SceneObjects
                 // Billboard the label so it always faces the camera.
                 labelText.transform.rotation = Quaternion.LookRotation(
                     labelText.transform.position - Camera.main.transform.position, Vector3.up);
+            }
+            if (targetLabelText != null && targetLabelText.gameObject.activeInHierarchy && Camera.main != null)
+            {
+                targetLabelText.transform.rotation = Quaternion.LookRotation(
+                    targetLabelText.transform.position - Camera.main.transform.position, Vector3.up);
             }
         }
 
@@ -120,11 +132,72 @@ namespace PoolAimTrainer.SceneObjects
             rect.sizeDelta = new Vector2(4f, 2f);
         }
 
+        void EnsureTargetMarker()
+        {
+            var existing = transform.Find("TargetMarker");
+            if (existing != null)
+            {
+                targetMarker = existing.gameObject;
+                var existingLabel = targetMarker.transform.Find("TargetLabel");
+                if (existingLabel != null)
+                    targetLabelText = existingLabel.GetComponent<TextMeshPro>();
+                return;
+            }
+
+            targetMarker = new GameObject("TargetMarker");
+            targetMarker.transform.SetParent(transform, false);
+            targetMarker.transform.localPosition = Vector3.zero;
+
+            var ring = new GameObject("TargetRing");
+            ring.name = "TargetRing";
+            ring.transform.SetParent(targetMarker.transform, false);
+            ring.transform.localPosition = new Vector3(0f, 0.006f, 0f);
+            var line = ring.AddComponent<LineRenderer>();
+            line.useWorldSpace = false;
+            line.loop = true;
+            line.positionCount = TargetRingSegments;
+            line.startWidth = pocketRadius * 0.12f;
+            line.endWidth = line.startWidth;
+            line.startColor = targetMarkerColor;
+            line.endColor = targetMarkerColor;
+            var shader = Shader.Find("Sprites/Default");
+            if (shader != null)
+                line.material = new Material(shader);
+            float radius = pocketRadius * 1.6f;
+            for (int i = 0; i < TargetRingSegments; i++)
+            {
+                float t = (Mathf.PI * 2f * i) / TargetRingSegments;
+                line.SetPosition(i, new Vector3(Mathf.Cos(t) * radius, 0f, Mathf.Sin(t) * radius));
+            }
+
+            var labelGO = new GameObject("TargetLabel");
+            labelGO.transform.SetParent(targetMarker.transform, false);
+            labelGO.transform.localPosition = new Vector3(0f, labelHeight * 1.35f, 0f);
+            labelGO.transform.localScale = Vector3.one * 0.012f;
+
+            targetLabelText = labelGO.AddComponent<TextMeshPro>();
+            targetLabelText.text = "目标";
+            targetLabelText.fontSize = 4f;
+            targetLabelText.alignment = TextAlignmentOptions.Center;
+            targetLabelText.color = targetMarkerColor;
+            targetLabelText.enableWordWrapping = false;
+            targetLabelText.rectTransform.sizeDelta = new Vector2(5f, 2f);
+
+            targetMarker.SetActive(false);
+        }
+
         public void SetHighlighted(bool on)
         {
             if (indicatorRenderer == null) EnsureIndicator();
             if (indicatorRenderer != null)
                 indicatorRenderer.material.color = on ? highlightColor : normalColor;
+        }
+
+        public void SetTargetMarked(bool on)
+        {
+            if (targetMarker == null) EnsureTargetMarker();
+            if (targetMarker != null)
+                targetMarker.SetActive(on);
         }
 
         void OnDrawGizmos()

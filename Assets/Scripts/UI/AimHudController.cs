@@ -30,10 +30,23 @@ namespace PoolAimTrainer.UI
         [Tooltip("HUD 相机 near plane 距离主球的偏移（米）")]
         public float nearOffset = 0.001f;
 
+        [Header("Render Texture Quality")]
+        [Tooltip("按 HUD 显示尺寸放大渲染纹理，2 表示用两倍像素重建，减少球边缘锯齿")]
+        public float renderTextureScale = 2f;
+        [Tooltip("HUD RenderTexture 的多重采样等级")]
+        public int renderTextureAntiAliasing = 4;
+        [Tooltip("HUD RenderTexture 的最小边长")]
+        public int minRenderTextureSize = 256;
+        [Tooltip("HUD RenderTexture 的最大边长，避免窗口放大后占用过多显存")]
+        public int maxRenderTextureSize = 2048;
+
         [Header("UI widgets")]
         public RectTransform crosshairHBar;
         public RectTransform crosshairVBar;
+        public RectTransform idealAnswerVBar;
         public TMP_Text offsetLabel;
+        [Tooltip("HUD 窗口十字线和理想答案线的屏幕像素宽度")]
+        public float hudLineWidthPx = 1f;
         [Tooltip("十字竖轴的长度 = 球直径 + 这个额外值（米）")]
         public float crosshairVerticalExtraMeters = 0.010f;
         public float ballDiameter = 0.0572f;
@@ -57,15 +70,29 @@ namespace PoolAimTrainer.UI
 
         Vector2 lastClickNormalized = new Vector2(0.5f, 0.5f);
         bool hasClicked;
+        RenderTexture ownedRenderTexture;
 
         void Start()
         {
+            ApplyHudLineWidthToAssignedBars();
             if (crosshairHBar != null) crosshairHBar.gameObject.SetActive(false);
             if (crosshairVBar != null) crosshairVBar.gameObject.SetActive(false);
+            if (idealAnswerVBar != null) idealAnswerVBar.gameObject.SetActive(false);
             if (offsetLabel != null) offsetLabel.text = "dx = 0.0 mm";
             if (nudgeLeftBtn != null) nudgeLeftBtn.onClick.AddListener(() => NudgeAim(-nudgeStepMm));
             if (nudgeRightBtn != null) nudgeRightBtn.onClick.AddListener(() => NudgeAim(+nudgeStepMm));
             if (resizeBtn != null) resizeBtn.onClick.AddListener(ToggleSize);
+        }
+
+        void ApplyHudLineWidthToAssignedBars()
+        {
+            float width = HudLineWidthCanvasUnits();
+            if (crosshairHBar != null)
+                crosshairHBar.sizeDelta = new Vector2(crosshairHBar.sizeDelta.x, width);
+            if (crosshairVBar != null)
+                crosshairVBar.sizeDelta = new Vector2(width, crosshairVBar.sizeDelta.y);
+            if (idealAnswerVBar != null)
+                idealAnswerVBar.sizeDelta = new Vector2(width, idealAnswerVBar.sizeDelta.y);
         }
 
         void LateUpdate()
@@ -84,12 +111,83 @@ namespace PoolAimTrainer.UI
             aimCamera.orthographicSize = orthoSize;
             aimCamera.nearClipPlane = 0.001f;
             aimCamera.farClipPlane = Mathf.Max(2f, dist + 1f);
+            EnsureRenderTexture();
 
             if (hasClicked)
             {
                 UpdateCrosshair();
                 UpdateOffsetLabel();
             }
+        }
+
+        void OnDestroy()
+        {
+            ReleaseOwnedRenderTexture();
+        }
+
+        void EnsureRenderTexture()
+        {
+            if (aimCamera == null || rawImage == null || rawImageRect == null) return;
+
+            Rect rect = rawImageRect.rect;
+            if (rect.width <= 0f || rect.height <= 0f) return;
+
+            float canvasScale = rawImage.canvas != null ? rawImage.canvas.scaleFactor : 1f;
+            float scale = Mathf.Max(1f, renderTextureScale);
+            int width = Mathf.Clamp(Mathf.CeilToInt(rect.width * canvasScale * scale), minRenderTextureSize, maxRenderTextureSize);
+            int height = Mathf.Clamp(Mathf.CeilToInt(rect.height * canvasScale * scale), minRenderTextureSize, maxRenderTextureSize);
+            int aa = Mathf.Clamp(NextSupportedAntiAliasing(renderTextureAntiAliasing), 1, 8);
+
+            RenderTexture current = aimCamera.targetTexture;
+            if (current != null &&
+                current.width == width &&
+                current.height == height &&
+                current.antiAliasing == aa)
+            {
+                if (rawImage.texture != current)
+                    rawImage.texture = current;
+                return;
+            }
+
+            ReleaseOwnedRenderTexture();
+
+            ownedRenderTexture = new RenderTexture(width, height, 24)
+            {
+                name = "AimHudRT_Runtime",
+                antiAliasing = aa,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                useMipMap = false,
+                autoGenerateMips = false
+            };
+            ownedRenderTexture.Create();
+            aimCamera.targetTexture = ownedRenderTexture;
+            rawImage.texture = ownedRenderTexture;
+        }
+
+        static int NextSupportedAntiAliasing(int requested)
+        {
+            if (requested >= 8) return 8;
+            if (requested >= 4) return 4;
+            if (requested >= 2) return 2;
+            return 1;
+        }
+
+        void ReleaseOwnedRenderTexture()
+        {
+            if (ownedRenderTexture == null) return;
+
+            if (aimCamera != null && aimCamera.targetTexture == ownedRenderTexture)
+                aimCamera.targetTexture = null;
+            if (rawImage != null && rawImage.texture == ownedRenderTexture)
+                rawImage.texture = null;
+
+            ownedRenderTexture.Release();
+            if (Application.isPlaying)
+                Destroy(ownedRenderTexture);
+            else
+                DestroyImmediate(ownedRenderTexture);
+            ownedRenderTexture = null;
         }
 
         void UpdateCrosshair()
@@ -105,6 +203,7 @@ namespace PoolAimTrainer.UI
             if (crosshairHBar != null)
             {
                 crosshairHBar.gameObject.SetActive(true);
+                crosshairHBar.sizeDelta = new Vector2(crosshairHBar.sizeDelta.x, HudLineWidthCanvasUnits());
                 crosshairHBar.anchoredPosition = new Vector2(0f, centerY);
             }
             if (crosshairVBar != null)
@@ -112,9 +211,48 @@ namespace PoolAimTrainer.UI
                 crosshairVBar.gameObject.SetActive(true);
                 float worldHeight = ballDiameter + crosshairVerticalExtraMeters;
                 float pxHeight = worldHeight / (2f * orthoSize) * r.height;
-                crosshairVBar.sizeDelta = new Vector2(crosshairVBar.sizeDelta.x, pxHeight);
+                crosshairVBar.sizeDelta = new Vector2(HudLineWidthCanvasUnits(), pxHeight);
                 crosshairVBar.anchoredPosition = new Vector2(clickX, centerY);
             }
+        }
+
+        public void ShowIdealAnswerMarker(Vector3 worldPoint)
+        {
+            if (idealAnswerVBar == null || aimCamera == null || rawImageRect == null) return;
+
+            Rect r = rawImageRect.rect;
+            if (r.width <= 0f || r.height <= 0f) return;
+
+            Vector3 viewport = aimCamera.WorldToViewportPoint(worldPoint);
+            if (viewport.z < 0f)
+            {
+                HideIdealAnswerMarker();
+                return;
+            }
+
+            float centerY = r.height * 0.5f;
+            float markerX = Mathf.Clamp01(viewport.x) * r.width;
+            float worldHeight = ballDiameter + crosshairVerticalExtraMeters;
+            float pxHeight = worldHeight / (2f * orthoSize) * r.height;
+
+            idealAnswerVBar.gameObject.SetActive(true);
+            idealAnswerVBar.sizeDelta = new Vector2(HudLineWidthCanvasUnits(), pxHeight);
+            idealAnswerVBar.anchoredPosition = new Vector2(markerX, centerY);
+        }
+
+        float HudLineWidthCanvasUnits()
+        {
+            float scale = 1f;
+            if (rawImage != null && rawImage.canvas != null)
+                scale = Mathf.Max(0.001f, rawImage.canvas.scaleFactor);
+
+            return Mathf.Max(1f, hudLineWidthPx) / scale;
+        }
+
+        public void HideIdealAnswerMarker()
+        {
+            if (idealAnswerVBar != null)
+                idealAnswerVBar.gameObject.SetActive(false);
         }
 
         void UpdateOffsetLabel()
