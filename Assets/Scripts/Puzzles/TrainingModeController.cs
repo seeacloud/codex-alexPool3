@@ -61,18 +61,21 @@ namespace PoolAimTrainer.Puzzles
         public BallController targetBall;
         public AimHudController aimHud;
         public Button submitButton;
+        public Button retakeButton;
         public TMP_Text resultLabel;
 
         bool hasGhostSnapshot;
         bool savedShowGhostBall;
         bool savedShowPredictionMarkers;
         Button boundSubmitButton;
+        Button boundRetakeButton;
         PocketMarker markedTargetPocket;
 
         void Start()
         {
             WireDefaults();
             EnsureSubmitButtonListener();
+            EnsureRetakeButtonListener();
             ApplyModeState();
         }
 
@@ -114,6 +117,7 @@ namespace PoolAimTrainer.Puzzles
 
             EnsureRuntimeHudWidgets();
             EnsureSubmitButtonListener();
+            EnsureRetakeButtonListener();
         }
 
         public void SetMode(TrainingMode nextMode)
@@ -156,6 +160,24 @@ namespace PoolAimTrainer.Puzzles
                 resultLabel.text = FormatEvaluation(evaluation);
             if (aimManager != null)
                 aimManager.ForceRefresh();
+            ApplyModeState();
+        }
+
+        public void RetakeAnswer()
+        {
+            WireDefaults();
+            if (mode != TrainingMode.Exam)
+                return;
+
+            examState = ExamState.Answering;
+            if (aimManager != null)
+                aimManager.ClearManualAim();
+            if (aimHud != null)
+                aimHud.ClearAimSelection();
+            if (resultLabel != null)
+                resultLabel.text = "请瞄准后提交";
+            HideIdealAnswerMarker();
+            ApplyModeState();
         }
 
         public AimAnswerEvaluation EvaluateCurrentAnswer()
@@ -254,10 +276,19 @@ namespace PoolAimTrainer.Puzzles
             SyncTargetPocketMarker();
 
             if (submitButton != null)
-                submitButton.gameObject.SetActive(mode == TrainingMode.Exam);
+                submitButton.gameObject.SetActive(mode == TrainingMode.Exam && examState == ExamState.Answering);
+            if (retakeButton != null)
+                retakeButton.gameObject.SetActive(mode == TrainingMode.Exam && examState == ExamState.Result);
             if (aimManager != null)
                 aimManager.ForceRefresh();
         }
+
+#if UNITY_INCLUDE_TESTS
+        public void ApplyModeStateForTests()
+        {
+            ApplyModeState();
+        }
+#endif
 
         void EnsureRuntimeHudWidgets()
         {
@@ -284,6 +315,26 @@ namespace PoolAimTrainer.Puzzles
 
                 if (hud.nudgeRightBtn != null)
                     submitGo.transform.SetSiblingIndex(hud.nudgeRightBtn.transform.GetSiblingIndex());
+            }
+
+            if (retakeButton == null)
+            {
+                var existing = GameObject.Find("BtnRetakeAnswer");
+                if (existing != null)
+                    retakeButton = existing.GetComponent<Button>();
+            }
+            if (retakeButton == null && hud != null && hud.nudgeLeftBtn != null)
+            {
+                var template = hud.nudgeLeftBtn.gameObject;
+                var retakeGo = Instantiate(template, template.transform.parent);
+                retakeGo.name = "BtnRetakeAnswer";
+                retakeButton = retakeGo.GetComponent<Button>();
+                if (retakeButton != null)
+                    retakeButton.onClick.RemoveAllListeners();
+                SetButtonText(retakeGo, "重考", 15f);
+
+                if (submitButton != null)
+                    retakeGo.transform.SetSiblingIndex(submitButton.transform.GetSiblingIndex() + 1);
             }
 
             if (resultLabel == null)
@@ -319,6 +370,25 @@ namespace PoolAimTrainer.Puzzles
             else
             {
                 boundSubmitButton = null;
+            }
+        }
+
+        void EnsureRetakeButtonListener()
+        {
+            if (boundRetakeButton == retakeButton)
+                return;
+
+            if (boundRetakeButton != null)
+                boundRetakeButton.onClick.RemoveListener(RetakeAnswer);
+
+            if (retakeButton != null)
+            {
+                retakeButton.onClick.AddListener(RetakeAnswer);
+                boundRetakeButton = retakeButton;
+            }
+            else
+            {
+                boundRetakeButton = null;
             }
         }
 

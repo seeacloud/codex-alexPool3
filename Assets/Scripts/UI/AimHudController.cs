@@ -255,6 +255,18 @@ namespace PoolAimTrainer.UI
                 idealAnswerVBar.gameObject.SetActive(false);
         }
 
+        public void ClearAimSelection()
+        {
+            hasClicked = false;
+            lastClickNormalized = new Vector2(0.5f, 0.5f);
+            if (crosshairHBar != null)
+                crosshairHBar.gameObject.SetActive(false);
+            if (crosshairVBar != null)
+                crosshairVBar.gameObject.SetActive(false);
+            if (offsetLabel != null)
+                offsetLabel.text = "dx = 0.0 mm";
+        }
+
         void UpdateOffsetLabel()
         {
             if (offsetLabel == null) return;

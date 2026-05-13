@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using TMPro;
 using PoolAimTrainer.Core;
 using PoolAimTrainer.Puzzles;
 using PoolAimTrainer.SceneObjects;
@@ -141,6 +142,55 @@ namespace PoolAimTrainer.Tests.EditMode
 
             Assert.That(firstPocket.IsTargetMarked, Is.False);
             Assert.That(secondPocket.IsTargetMarked, Is.True);
+        }
+
+        [Test]
+        public void RetakeAnswer_ReturnsToSameExamQuestionForAnotherAttempt()
+        {
+            root = new GameObject("TrainingModeRetakeRoot");
+            var aimManager = root.AddComponent<AimManager>();
+            aimManager.showGhostBall = true;
+            aimManager.showPredictionMarkers = true;
+            aimManager.currentPocket = CreatePocket("TargetPocket", 1, Vector3.zero);
+            aimManager.SetManualAimDir(Vector3.forward);
+
+            var hud = root.AddComponent<AimHudController>();
+            var markerGo = new GameObject("IdealAnswerV", typeof(RectTransform));
+            markerGo.transform.SetParent(root.transform, false);
+            markerGo.SetActive(true);
+            hud.idealAnswerVBar = markerGo.GetComponent<RectTransform>();
+
+            var submitButton = new GameObject("Submit", typeof(Button)).GetComponent<Button>();
+            submitButton.transform.SetParent(root.transform, false);
+            var retakeButton = new GameObject("Retake", typeof(Button)).GetComponent<Button>();
+            retakeButton.transform.SetParent(root.transform, false);
+            var resultText = new GameObject("Result").AddComponent<TextMeshProUGUI>();
+            resultText.transform.SetParent(root.transform, false);
+
+            var controller = root.AddComponent<TrainingModeController>();
+            controller.aimManager = aimManager;
+            controller.aimHud = hud;
+            controller.submitButton = submitButton;
+            controller.retakeButton = retakeButton;
+            controller.resultLabel = resultText;
+
+            controller.SetMode(TrainingMode.Exam);
+            controller.examState = ExamState.Result;
+            resultText.text = "未进 | 偏移 +5.0 mm R | 角差 1.00°";
+            controller.ApplyModeStateForTests();
+
+            Assert.That(submitButton.gameObject.activeSelf, Is.False);
+            Assert.That(retakeButton.gameObject.activeSelf, Is.True);
+
+            controller.RetakeAnswer();
+
+            Assert.That(controller.examState, Is.EqualTo(ExamState.Answering));
+            Assert.That(aimManager.currentPocket.name, Is.EqualTo("TargetPocket"));
+            Assert.That(aimManager.hasManualAim, Is.False);
+            Assert.That(resultText.text, Is.EqualTo("请瞄准后提交"));
+            Assert.That(markerGo.activeSelf, Is.False);
+            Assert.That(submitButton.gameObject.activeSelf, Is.True);
+            Assert.That(retakeButton.gameObject.activeSelf, Is.False);
         }
 
         PocketMarker CreatePocket(string name, int number, Vector3 position)
