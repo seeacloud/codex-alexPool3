@@ -208,9 +208,23 @@ namespace PoolAimTrainer.Tests.EditMode
 
             var rightPanelRect = rightPanel.GetComponent<RectTransform>();
             var rightPanelLayout = rightPanel.GetComponent<LayoutElement>();
+            var rightPanelImage = rightPanel.GetComponent<Image>();
+            var rightPanelGroup = rightPanel.GetComponent<VerticalLayoutGroup>();
             var hudLayout = hudImage.GetComponent<LayoutElement>();
-            Assert.That(rightPanelRect.sizeDelta.x, Is.EqualTo(330f).Within(0.01f));
-            Assert.That(rightPanelLayout.preferredWidth, Is.EqualTo(330f).Within(0.01f));
+            Assert.That(rightPanelRect.sizeDelta.x, Is.EqualTo(350f).Within(0.01f));
+            Assert.That(rightPanelLayout.preferredWidth, Is.EqualTo(350f).Within(0.01f));
+            Assert.That(rightPanelImage, Is.Not.Null);
+            Assert.That(rightPanelImage.type, Is.EqualTo(Image.Type.Sliced));
+            Assert.That(rightPanelImage.color, Is.EqualTo(new Color(0.08f, 0.08f, 0.08f, 0.92f)));
+            Assert.That(rightPanelGroup, Is.Not.Null);
+            Assert.That(rightPanelGroup.padding.left, Is.EqualTo(10));
+            Assert.That(rightPanelGroup.padding.right, Is.EqualTo(10));
+            Assert.That(rightPanelGroup.padding.top, Is.EqualTo(10));
+            Assert.That(rightPanelGroup.padding.bottom, Is.EqualTo(10));
+            Assert.That(rightPanelGroup.spacing, Is.EqualTo(8f));
+            Assert.That(
+                rightPanelRect.sizeDelta.x - rightPanelGroup.padding.left - rightPanelGroup.padding.right,
+                Is.EqualTo(330f).Within(0.01f));
             Assert.That(hudLayout.preferredHeight, Is.EqualTo(190f).Within(0.01f));
             Assert.That(root.transform.Find("RightPanelToggleButton"), Is.Not.Null);
         }
@@ -269,6 +283,10 @@ namespace PoolAimTrainer.Tests.EditMode
             puzzleTitle.AddComponent<TMPro.TextMeshProUGUI>().text = "出题";
             var puzzleBody = new GameObject("ModeRow", typeof(RectTransform));
             puzzleBody.transform.SetParent(puzzleSection.transform, false);
+            var hiddenDetachedLabel = new GameObject("LblTgt", typeof(RectTransform), typeof(LayoutElement));
+            hiddenDetachedLabel.transform.SetParent(puzzleSection.transform, false);
+            hiddenDetachedLabel.SetActive(false);
+            hiddenDetachedLabel.GetComponent<LayoutElement>().ignoreLayout = true;
 
             var visibility = CreateTestVisibility(root);
             var togglePanel = root.AddComponent<ReferenceLineTogglePanel>();
@@ -281,6 +299,11 @@ namespace PoolAimTrainer.Tests.EditMode
             puzzleButton.onClick.Invoke();
             Assert.That(puzzleTitle.activeSelf, Is.True);
             Assert.That(puzzleBody.activeSelf, Is.False);
+            Assert.That(hiddenDetachedLabel.activeSelf, Is.False);
+
+            puzzleButton.onClick.Invoke();
+            Assert.That(puzzleBody.activeSelf, Is.True);
+            Assert.That(hiddenDetachedLabel.activeSelf, Is.False);
 
             Transform referencePanel = rightPanel.transform.Find("ReferenceLineTogglePanel");
             var referenceTitle = referencePanel.Find("Title").gameObject;
@@ -290,6 +313,161 @@ namespace PoolAimTrainer.Tests.EditMode
             referenceButton.onClick.Invoke();
             Assert.That(referenceTitle.activeSelf, Is.True);
             Assert.That(referenceGrid.activeSelf, Is.False);
+        }
+
+        [Test]
+        public void TogglePanel_StylesPuzzleSectionLikeMockupCard()
+        {
+            root = new GameObject("Canvas", typeof(Canvas));
+            var rightPanel = new GameObject("RightPanel", typeof(RectTransform));
+            rightPanel.transform.SetParent(root.transform, false);
+
+            var puzzleSection = new GameObject("PuzzleSection", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            puzzleSection.transform.SetParent(rightPanel.transform, false);
+            var puzzleTitle = new GameObject("Title", typeof(RectTransform));
+            puzzleTitle.transform.SetParent(puzzleSection.transform, false);
+            var titleLabel = puzzleTitle.AddComponent<TMPro.TextMeshProUGUI>();
+            titleLabel.text = "出题";
+            titleLabel.alignment = TMPro.TextAlignmentOptions.Center;
+            var puzzleBody = new GameObject("ModeRow", typeof(RectTransform));
+            puzzleBody.transform.SetParent(puzzleSection.transform, false);
+
+            var visibility = CreateTestVisibility(root);
+            var togglePanel = root.AddComponent<ReferenceLineTogglePanel>();
+            togglePanel.visibility = visibility;
+
+            togglePanel.BuildPanel();
+
+            var sectionImage = puzzleSection.GetComponent<Image>();
+            var sectionOutline = puzzleSection.GetComponent<Outline>();
+            var sectionLayout = puzzleSection.GetComponent<VerticalLayoutGroup>();
+            Assert.That(sectionImage, Is.Not.Null);
+            Assert.That(sectionImage.type, Is.EqualTo(Image.Type.Sliced));
+            Assert.That(sectionImage.color, Is.EqualTo(new Color(0.11f, 0.11f, 0.11f, 0.9f)));
+            Assert.That(sectionOutline, Is.Not.Null);
+            Assert.That(sectionOutline.effectColor, Is.EqualTo(new Color(0.32f, 0.32f, 0.32f, 0.55f)));
+            Assert.That(sectionLayout.padding.left, Is.EqualTo(10));
+            Assert.That(sectionLayout.padding.right, Is.EqualTo(10));
+            Assert.That(sectionLayout.padding.top, Is.EqualTo(10));
+            Assert.That(sectionLayout.padding.bottom, Is.EqualTo(10));
+
+            Assert.That(titleLabel.text, Is.EqualTo("出题"));
+            Assert.That(titleLabel.alignment, Is.EqualTo(TMPro.TextAlignmentOptions.Left));
+            Assert.That(puzzleTitle.GetComponent<Button>(), Is.Not.Null);
+            var collapseIcon = puzzleTitle.transform.Find("CollapseIcon");
+            Assert.That(collapseIcon, Is.Not.Null);
+            Assert.That(collapseIcon.GetComponent<TMPro.TextMeshProUGUI>(), Is.Null);
+            Assert.That(collapseIcon.GetComponent<Image>(), Is.Not.Null);
+            Assert.That(collapseIcon.GetComponent<Image>().sprite, Is.Not.Null);
+            Assert.That(puzzleSection.transform.GetChild(1).name, Is.EqualTo("TitleDivider"));
+            Assert.That(puzzleSection.transform.Find("TitleDivider").GetComponent<Image>().color, Is.EqualTo(new Color(1f, 1f, 1f, 0.08f)));
+
+            var expandedSprite = collapseIcon.GetComponent<Image>().sprite;
+            puzzleTitle.GetComponent<Button>().onClick.Invoke();
+            Assert.That(titleLabel.text, Is.EqualTo("出题"));
+            Assert.That(collapseIcon.GetComponent<Image>().sprite, Is.Not.SameAs(expandedSprite));
+            Assert.That(puzzleBody.activeSelf, Is.False);
+        }
+
+        [Test]
+        public void PuzzleUI_AppliesStandardLabelAndContentColumns()
+        {
+            root = new GameObject("PuzzleLayoutRoot");
+            var section = new GameObject("PuzzleSection", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            section.transform.SetParent(root.transform, false);
+            section.AddComponent<Puzzles.PuzzleUI>();
+
+            var modeRow = CreatePuzzleRow(section.transform, "ModeRow", "模式");
+            CreateButton(modeRow.transform, "BtnStudyMode", "学习");
+            CreateButton(modeRow.transform, "BtnExamMode", "考试");
+
+            var angleRow = CreatePuzzleRow(section.transform, "AngleRow", "∠1");
+            var angleDropdown = CreateDropdown(angleRow.transform, "AngleDropdown");
+
+            var pocketRow = CreatePuzzleRow(section.transform, "PocketRow", "袋口");
+            var pocketDropdown = CreateDropdown(pocketRow.transform, "PocketDropdown");
+
+            CreateStandalonePuzzleLabel(section.transform, "LblTgt", "子球 → 袋口");
+            var tgtRow = CreatePuzzleRow(section.transform, "TgtRow", "");
+            CreateButton(tgtRow.transform, "BtnTgtN", "近");
+            CreateButton(tgtRow.transform, "BtnTgtM", "中");
+            CreateButton(tgtRow.transform, "BtnTgtF", "远");
+
+            CreateStandalonePuzzleLabel(section.transform, "LblCue", "主球 → 子球");
+            var cueRow = CreatePuzzleRow(section.transform, "CueRow", "");
+            CreateButton(cueRow.transform, "BtnCueN", "近");
+            CreateButton(cueRow.transform, "BtnCueM", "中");
+            CreateButton(cueRow.transform, "BtnCueF", "远");
+
+            var actionRow = new GameObject("ActionRow", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            actionRow.transform.SetParent(section.transform, false);
+            CreateButton(actionRow.transform, "BtnGenerate", "出题");
+            CreateButton(actionRow.transform, "BtnRandom", "随机");
+
+            var ui = section.GetComponent<Puzzles.PuzzleUI>();
+            ui.angleDropdown = angleDropdown;
+            ui.pocketDropdown = pocketDropdown;
+            ui.btnStudyMode = modeRow.transform.Find("BtnStudyMode").GetComponent<Button>();
+            ui.btnExamMode = modeRow.transform.Find("BtnExamMode").GetComponent<Button>();
+            ui.btnTargetNear = tgtRow.transform.Find("BtnTgtN").GetComponent<Button>();
+            ui.btnTargetMid = tgtRow.transform.Find("BtnTgtM").GetComponent<Button>();
+            ui.btnTargetFar = tgtRow.transform.Find("BtnTgtF").GetComponent<Button>();
+            ui.btnCueNear = cueRow.transform.Find("BtnCueN").GetComponent<Button>();
+            ui.btnCueMid = cueRow.transform.Find("BtnCueM").GetComponent<Button>();
+            ui.btnCueFar = cueRow.transform.Find("BtnCueF").GetComponent<Button>();
+            ui.btnGenerate = actionRow.transform.Find("BtnGenerate").GetComponent<Button>();
+            ui.btnRandom = actionRow.transform.Find("BtnRandom").GetComponent<Button>();
+
+            InvokeStart(ui);
+
+            AssertPuzzleLabelColumn(modeRow.transform.Find("Lbl"));
+            AssertPuzzleLabelColumn(angleRow.transform.Find("Lbl"));
+            AssertPuzzleLabelColumn(pocketRow.transform.Find("Lbl"));
+            AssertPuzzleLabelColumn(tgtRow.transform.Find("Lbl"));
+            AssertPuzzleLabelColumn(cueRow.transform.Find("Lbl"));
+
+            AssertContentWidth(modeRow.transform.Find("Content"), 232f);
+            AssertContentWidth(angleRow.transform.Find("Content"), 232f);
+            AssertContentWidth(pocketRow.transform.Find("Content"), 232f);
+            AssertContentWidth(tgtRow.transform.Find("Content"), 232f);
+            AssertContentWidth(cueRow.transform.Find("Content"), 232f);
+            AssertContentWidth(actionRow.transform, 232f);
+
+            Assert.That(modeRow.transform.Find("Content/BtnStudyMode"), Is.Not.Null);
+            Assert.That(angleRow.transform.Find("Content/AngleButtonGrid"), Is.Not.Null);
+            Assert.That(pocketRow.transform.Find("Content/PocketMap"), Is.Not.Null);
+            Assert.That(pocketRow.transform.Find("Content/PocketMap"), Is.Not.Null);
+            Assert.That(pocketRow.transform.Find("Content/PocketRandom"), Is.Not.Null);
+            Assert.That(tgtRow.transform.Find("Content/BtnTgtM"), Is.Not.Null);
+
+            var angleGrid = angleRow.transform.Find("Content/AngleButtonGrid").GetComponent<GridLayoutGroup>();
+            Assert.That(angleGrid.cellSize.x, Is.EqualTo(55f).Within(0.01f));
+            Assert.That(angleGrid.spacing.x, Is.EqualTo(4f).Within(0.01f));
+            Assert.That(4f * angleGrid.cellSize.x + 3f * angleGrid.spacing.x, Is.EqualTo(232f).Within(0.01f));
+
+            Assert.That(actionRow.transform.Find("BtnRandom").gameObject.activeSelf, Is.False);
+            Assert.That(FirstActiveChild(modeRow.transform.Find("Content")).name, Is.EqualTo("BtnStudyMode"));
+            Assert.That(FirstActiveChild(pocketRow.transform.Find("Content")).name, Is.EqualTo("PocketMap"));
+
+            Assert.That(pocketDropdown.value, Is.EqualTo(3));
+            AssertPuzzleButtonRounded(modeRow.transform.Find("Content/BtnStudyMode"));
+            AssertPuzzleButtonRounded(angleGrid.transform.GetChild(0));
+            AssertPuzzleButtonRounded(actionRow.transform.Find("BtnGenerate"));
+
+            var studyButton = modeRow.transform.Find("Content/BtnStudyMode").GetComponent<Button>();
+            var examButton = modeRow.transform.Find("Content/BtnExamMode").GetComponent<Button>();
+            Assert.That(studyButton.GetComponent<Image>().color, Is.EqualTo(examButton.GetComponent<Image>().color));
+            AssertSelectedButtonText(studyButton, true);
+            AssertSelectedButtonText(examButton, false);
+
+            var anyAngleButton = angleGrid.transform.GetChild(0).GetComponent<Button>();
+            var zeroAngleButton = angleGrid.transform.GetChild(1).GetComponent<Button>();
+            Assert.That(anyAngleButton.GetComponent<Image>().color, Is.EqualTo(zeroAngleButton.GetComponent<Image>().color));
+            AssertSelectedButtonText(anyAngleButton, true);
+            AssertSelectedButtonText(zeroAngleButton, false);
+
+            AssertSelectedButtonText(tgtRow.transform.Find("Content/BtnTgtM").GetComponent<Button>(), true);
+            AssertSelectedButtonText(tgtRow.transform.Find("Content/BtnTgtN").GetComponent<Button>(), false);
         }
 
         [Test]
@@ -512,6 +690,90 @@ namespace PoolAimTrainer.Tests.EditMode
             var line = child.GetComponent<LineRenderer>();
             Assert.That(line, Is.Not.Null);
             return line;
+        }
+
+        static GameObject CreatePuzzleRow(Transform parent, string name, string labelText)
+        {
+            var row = new GameObject(name, typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(parent, false);
+            var label = new GameObject("Lbl", typeof(RectTransform), typeof(LayoutElement));
+            label.transform.SetParent(row.transform, false);
+            var text = label.AddComponent<TMPro.TextMeshProUGUI>();
+            text.text = labelText;
+            text.color = Color.white;
+            return row;
+        }
+
+        static void CreateStandalonePuzzleLabel(Transform parent, string name, string text)
+        {
+            var label = new GameObject(name, typeof(RectTransform), typeof(LayoutElement));
+            label.transform.SetParent(parent, false);
+            var tmp = label.AddComponent<TMPro.TextMeshProUGUI>();
+            tmp.text = text;
+            tmp.color = Color.white;
+        }
+
+        static Button CreateButton(Transform parent, string name, string label)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var text = new GameObject("Text", typeof(RectTransform));
+            text.transform.SetParent(go.transform, false);
+            text.AddComponent<TMPro.TextMeshProUGUI>().text = label;
+            return go.GetComponent<Button>();
+        }
+
+        static TMPro.TMP_Dropdown CreateDropdown(Transform parent, string name)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(TMPro.TMP_Dropdown), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            return go.GetComponent<TMPro.TMP_Dropdown>();
+        }
+
+        static void AssertPuzzleLabelColumn(Transform label)
+        {
+            Assert.That(label, Is.Not.Null);
+            var layout = label.GetComponent<LayoutElement>();
+            Assert.That(layout, Is.Not.Null);
+            Assert.That(layout.preferredWidth, Is.EqualTo(70f).Within(0.01f));
+            Assert.That(layout.flexibleWidth, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        static void AssertContentWidth(Transform content, float expectedWidth)
+        {
+            Assert.That(content, Is.Not.Null);
+            var layout = content.GetComponent<LayoutElement>();
+            Assert.That(layout, Is.Not.Null);
+            Assert.That(layout.preferredWidth, Is.EqualTo(expectedWidth).Within(0.01f));
+            Assert.That(layout.flexibleWidth, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        static void AssertPuzzleButtonRounded(Transform buttonTransform)
+        {
+            Assert.That(buttonTransform, Is.Not.Null);
+            var image = buttonTransform.GetComponent<Image>();
+            Assert.That(image, Is.Not.Null);
+            Assert.That(image.sprite, Is.Not.Null);
+            Assert.That(image.type, Is.EqualTo(Image.Type.Sliced));
+        }
+
+        static void AssertSelectedButtonText(Button button, bool selected)
+        {
+            Assert.That(button, Is.Not.Null);
+            var text = button.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            Assert.That(text, Is.Not.Null);
+            Assert.That(text.color, Is.EqualTo(selected ? new Color(0.2f, 0.9f, 0.45f, 1f) : Color.white));
+            Assert.That(text.fontStyle, Is.EqualTo(selected ? TMPro.FontStyles.Bold : TMPro.FontStyles.Normal));
+        }
+
+        static Transform FirstActiveChild(Transform parent)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.gameObject.activeSelf)
+                    return child;
+            }
+            return null;
         }
 
         static void AssertVector(Vector3 expected, Vector3 actual, string label)

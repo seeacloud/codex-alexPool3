@@ -14,11 +14,19 @@ namespace PoolAimTrainer.UI
         const string LegacyGhostButtonName = "BtnGhost";
         const string PuzzleSectionObjectName = "PuzzleSection";
         const string SectionTitleObjectName = "Title";
-        const float RightPanelWidth = 330f;
+        const float RightPanelContentWidth = 330f;
+        const float RightPanelWidth = 350f;
         const float HudImagePreferredHeight = 190f;
         const float RightPanelHorizontalPadding = 16f;
         const float HudInset = 32f;
         const float ToggleGridSpacing = 6f;
+        static readonly Color PuzzleCardColor = new Color(0.11f, 0.11f, 0.11f, 0.9f);
+        static readonly Color PuzzleCardOutlineColor = new Color(0.32f, 0.32f, 0.32f, 0.55f);
+        static readonly Color SectionDividerColor = new Color(1f, 1f, 1f, 0.08f);
+        static Sprite rightPanelRoundedSprite;
+        static Sprite puzzleCardRoundedSprite;
+        static Sprite arrowUpSprite;
+        static Sprite arrowDownSprite;
 
         public ReferenceLineVisibility visibility;
         public AimManager aimManager;
@@ -68,7 +76,7 @@ namespace PoolAimTrainer.UI
 
             HideLegacyGhostButton();
 
-            Canvas canvas = FindOrCreateCanvas();
+            Canvas canvas = GetComponentInParent<Canvas>() ?? FindOrCreateCanvas();
             Transform parent = FindRightPanel(canvas);
             bool embeddedInRightPanel = parent != null;
             if (!embeddedInRightPanel)
@@ -133,7 +141,7 @@ namespace PoolAimTrainer.UI
 
             if (embeddedInRightPanel)
             {
-                EnsureCollapsibleSection(parent.Find(PuzzleSectionObjectName), "出题");
+                EnsurePuzzleSectionMockup(parent.Find(PuzzleSectionObjectName));
                 EnsureCollapsibleSection(panel, "参考线");
             }
         }
@@ -172,12 +180,151 @@ namespace PoolAimTrainer.UI
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 2;
             grid.childAlignment = TextAnchor.UpperLeft;
-            float cellWidth = (RightPanelWidth - RightPanelHorizontalPadding - ToggleGridSpacing) * 0.5f;
+            float cellWidth = (RightPanelContentWidth - RightPanelHorizontalPadding - ToggleGridSpacing) * 0.5f;
             grid.cellSize = new Vector2(cellWidth, 22f);
 
             var layout = gridGo.GetComponent<LayoutElement>();
             layout.preferredHeight = 22f * 7f + 4f * 6f;
             return gridGo.transform;
+        }
+
+        static void EnsurePuzzleSectionMockup(Transform section)
+        {
+            if (section == null)
+                return;
+
+            var background = section.GetComponent<Image>() ?? section.gameObject.AddComponent<Image>();
+            background.color = PuzzleCardColor;
+            background.sprite = GetPuzzleCardRoundedSprite();
+            background.type = Image.Type.Sliced;
+            background.raycastTarget = true;
+
+            var outline = section.GetComponent<Outline>() ?? section.gameObject.AddComponent<Outline>();
+            outline.effectColor = PuzzleCardOutlineColor;
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var layout = section.GetComponent<VerticalLayoutGroup>() ?? section.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 10, 10);
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            Transform title = section.Find(SectionTitleObjectName);
+            if (title == null)
+            {
+                CreateHeader(section, "出题");
+                title = section.Find(SectionTitleObjectName);
+                if (title == null)
+                    return;
+                title.SetAsFirstSibling();
+            }
+
+            var label = title.GetComponent<TextMeshProUGUI>();
+            if (label == null)
+                return;
+
+            label.text = "出题";
+            label.fontSize = 15f;
+            label.color = Color.white;
+            label.alignment = TextAlignmentOptions.Left;
+            label.raycastTarget = true;
+
+            var titleLayout = title.GetComponent<LayoutElement>() ?? title.gameObject.AddComponent<LayoutElement>();
+            titleLayout.preferredHeight = 24f;
+
+            var button = title.GetComponent<Button>() ?? title.gameObject.AddComponent<Button>();
+            button.targetGraphic = label;
+            button.transition = Selectable.Transition.ColorTint;
+            button.onClick.RemoveAllListeners();
+
+            var icon = EnsureTitleCollapseIcon(title);
+            Transform divider = EnsureTitleDivider(section, title);
+            button.onClick.AddListener(() =>
+            {
+                bool shouldCollapse = HasVisiblePuzzleContent(section, title, divider);
+                SetPuzzleSectionCollapsed(section, title, divider, shouldCollapse);
+            });
+
+            SetPuzzleSectionCollapsed(section, title, divider, false);
+        }
+
+        static Image EnsureTitleCollapseIcon(Transform title)
+        {
+            Transform existing = title.Find("CollapseIcon");
+            if (existing != null)
+            {
+                var oldText = existing.GetComponent<TextMeshProUGUI>();
+                if (oldText != null)
+                    DestroyRuntimeOrImmediate(oldText);
+                return existing.GetComponent<Image>() ?? existing.gameObject.AddComponent<Image>();
+            }
+
+            var go = new GameObject("CollapseIcon", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(title, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(1f, 0f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(22f, 0f);
+
+            var icon = go.GetComponent<Image>();
+            icon.color = Color.white;
+            icon.raycastTarget = false;
+            return icon;
+        }
+
+        static Transform EnsureTitleDivider(Transform section, Transform title)
+        {
+            Transform divider = section.Find("TitleDivider");
+            if (divider == null)
+            {
+                var dividerGo = new GameObject("TitleDivider", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                dividerGo.transform.SetParent(section, false);
+                divider = dividerGo.transform;
+            }
+
+            divider.SetSiblingIndex(title.GetSiblingIndex() + 1);
+            var image = divider.GetComponent<Image>();
+            image.color = SectionDividerColor;
+            image.raycastTarget = false;
+
+            var layout = divider.GetComponent<LayoutElement>();
+            layout.preferredHeight = 1f;
+            layout.flexibleHeight = 0f;
+            return divider;
+        }
+
+        static bool HasVisiblePuzzleContent(Transform section, Transform title, Transform divider)
+        {
+            foreach (Transform child in section)
+            {
+                if (child != title && child != divider && child.gameObject.activeSelf)
+                    return true;
+            }
+            return false;
+        }
+
+        static void SetPuzzleSectionCollapsed(Transform section, Transform title, Transform divider, bool collapsed)
+        {
+            foreach (Transform child in section)
+            {
+                if (child == title || child == divider)
+                    continue;
+
+                var layout = child.GetComponent<LayoutElement>();
+                bool hiddenByLayout = layout != null && layout.ignoreLayout;
+                child.gameObject.SetActive(!collapsed && !hiddenByLayout);
+            }
+
+            var label = title.GetComponent<TextMeshProUGUI>();
+            if (label != null)
+                label.text = "出题";
+
+            var icon = title.Find("CollapseIcon")?.GetComponent<Image>();
+            if (icon != null)
+                icon.sprite = collapsed ? GetCollapseArrowDownSprite() : GetCollapseArrowUpSprite();
         }
 
         static void EnsureCollapsibleSection(Transform section, string fallbackTitle)
@@ -267,6 +414,20 @@ namespace PoolAimTrainer.UI
             var layout = rightPanel.GetComponent<LayoutElement>() ?? rightPanel.gameObject.AddComponent<LayoutElement>();
             layout.preferredWidth = RightPanelWidth;
 
+            var background = rightPanel.GetComponent<Image>() ?? rightPanel.gameObject.AddComponent<Image>();
+            background.color = new Color(0.08f, 0.08f, 0.08f, 0.92f);
+            background.sprite = GetRightPanelRoundedSprite();
+            background.type = Image.Type.Sliced;
+            background.raycastTarget = true;
+
+            var group = rightPanel.GetComponent<VerticalLayoutGroup>() ?? rightPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+            group.padding = new RectOffset(10, 10, 10, 10);
+            group.spacing = 8f;
+            group.childControlWidth = true;
+            group.childControlHeight = true;
+            group.childForceExpandWidth = true;
+            group.childForceExpandHeight = false;
+
             var hudImage = rightPanel.Find("HudSection/RawImage");
             if (hudImage != null)
             {
@@ -275,6 +436,168 @@ namespace PoolAimTrainer.UI
             }
 
             EnsureCollapseButton(rightPanel, canvas);
+        }
+
+        static Sprite GetRightPanelRoundedSprite()
+        {
+            if (rightPanelRoundedSprite != null)
+                return rightPanelRoundedSprite;
+
+            const int size = 32;
+            const float radius = 8f;
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false)
+            {
+                name = "RightPanelRoundedBackground",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float dx = Mathf.Max(radius - px, 0f, px - (size - radius));
+                    float dy = Mathf.Max(radius - py, 0f, py - (size - radius));
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(radius + 0.5f - distance);
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            texture.Apply(false, true);
+
+            rightPanelRoundedSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius));
+            rightPanelRoundedSprite.hideFlags = HideFlags.HideAndDontSave;
+            return rightPanelRoundedSprite;
+        }
+
+        static Sprite GetPuzzleCardRoundedSprite()
+        {
+            if (puzzleCardRoundedSprite != null)
+                return puzzleCardRoundedSprite;
+
+            const int size = 32;
+            const float radius = 7f;
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false)
+            {
+                name = "PuzzleSectionRoundedBackground",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float dx = Mathf.Max(radius - px, 0f, px - (size - radius));
+                    float dy = Mathf.Max(radius - py, 0f, py - (size - radius));
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(radius + 0.5f - distance);
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            texture.Apply(false, true);
+
+            puzzleCardRoundedSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius));
+            puzzleCardRoundedSprite.hideFlags = HideFlags.HideAndDontSave;
+            return puzzleCardRoundedSprite;
+        }
+
+        static Sprite GetCollapseArrowUpSprite()
+        {
+            if (arrowUpSprite == null)
+                arrowUpSprite = CreateCollapseArrowSprite("CollapseArrowUp", true);
+            return arrowUpSprite;
+        }
+
+        static Sprite GetCollapseArrowDownSprite()
+        {
+            if (arrowDownSprite == null)
+                arrowDownSprite = CreateCollapseArrowSprite("CollapseArrowDown", false);
+            return arrowDownSprite;
+        }
+
+        static Sprite CreateCollapseArrowSprite(string name, bool up)
+        {
+            const int size = 32;
+            const float lineWidth = 3.2f;
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false)
+            {
+                name = name,
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            Color clear = new Color(1f, 1f, 1f, 0f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                    texture.SetPixel(x, y, clear);
+            }
+
+            Vector2 left = up ? new Vector2(7f, 12f) : new Vector2(7f, 20f);
+            Vector2 center = up ? new Vector2(16f, 21f) : new Vector2(16f, 11f);
+            Vector2 right = up ? new Vector2(25f, 12f) : new Vector2(25f, 20f);
+
+            DrawLine(texture, left, center, lineWidth, Color.white);
+            DrawLine(texture, center, right, lineWidth, Color.white);
+            texture.Apply(false, true);
+
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            return sprite;
+        }
+
+        static void DrawLine(Texture2D texture, Vector2 a, Vector2 b, float width, Color color)
+        {
+            int w = texture.width;
+            int h = texture.height;
+            Vector2 ab = b - a;
+            float lengthSq = ab.sqrMagnitude;
+            if (lengthSq <= Mathf.Epsilon)
+                return;
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    Vector2 p = new Vector2(x + 0.5f, y + 0.5f);
+                    float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / lengthSq);
+                    Vector2 closest = a + ab * t;
+                    float distance = Vector2.Distance(p, closest);
+                    float alpha = Mathf.Clamp01(width * 0.5f + 0.5f - distance);
+                    if (alpha <= 0f)
+                        continue;
+
+                    Color current = texture.GetPixel(x, y);
+                    if (alpha > current.a)
+                        texture.SetPixel(x, y, new Color(color.r, color.g, color.b, alpha));
+                }
+            }
         }
 
         static void EnsureCollapseButton(Transform rightPanel, Canvas canvas)
@@ -340,16 +663,42 @@ namespace PoolAimTrainer.UI
 
         static Transform FindRightPanel(Canvas canvas)
         {
-            var panelGo = GameObject.Find(RightPanelObjectName);
-            if (panelGo == null)
+            Transform panelTransform = FindChildRecursive(canvas.transform, RightPanelObjectName);
+            if (panelTransform == null)
                 return null;
 
-            var rightPanel = panelGo.GetComponent<RectTransform>();
+            var rightPanel = panelTransform.GetComponent<RectTransform>();
             if (rightPanel == null)
                 return null;
 
             var ownerCanvas = rightPanel.GetComponentInParent<Canvas>();
             return ownerCanvas == canvas ? rightPanel : null;
+        }
+
+        static Transform FindChildRecursive(Transform root, string childName)
+        {
+            if (root == null)
+                return null;
+            if (root.name == childName)
+                return root;
+
+            foreach (Transform child in root)
+            {
+                Transform found = FindChildRecursive(child, childName);
+                if (found != null)
+                    return found;
+            }
+            return null;
+        }
+
+        static void DestroyRuntimeOrImmediate(Object obj)
+        {
+            if (obj == null)
+                return;
+            if (Application.isPlaying)
+                Destroy(obj);
+            else
+                DestroyImmediate(obj);
         }
 
         void OnVisibilityChanged()

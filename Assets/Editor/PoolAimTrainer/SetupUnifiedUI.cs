@@ -17,7 +17,7 @@ namespace PoolAimTrainer.EditorTools
     public static class SetupUnifiedUI
     {
         const int HUD_RT_SIZE = 512;
-        const float PANEL_WIDTH = 330f;
+        const float PANEL_WIDTH = 350f;
         const float HUD_IMAGE_HEIGHT = 190f;
 
         [MenuItem("PoolAimTrainer/Setup Unified UI")]

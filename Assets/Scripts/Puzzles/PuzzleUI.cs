@@ -37,11 +37,11 @@ namespace PoolAimTrainer.Puzzles
         readonly System.Collections.Generic.List<UnityEngine.UI.Button> pocketButtons =
             new System.Collections.Generic.List<UnityEngine.UI.Button>();
 
-        Color activeColor = new Color(0.2f, 0.8f, 0.4f, 1f);
+        Color activeColor = new Color(0.2f, 0.9f, 0.45f, 1f);
         Color inactiveColor = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+        Color buttonBackgroundColor = new Color(0.25f, 0.25f, 0.25f, 0.9f);
         Color pocketMapColor = new Color(0.04f, 0.22f, 0.10f, 1f);
         Color pocketMarkerColor = Color.white;
-        const float AngleButtonWidth = 46f;
         const float AngleButtonHeight = 26f;
         const float AngleButtonSpacing = 4f;
         const int AngleButtonColumns = 4;
@@ -49,8 +49,13 @@ namespace PoolAimTrainer.Puzzles
         const float PocketMapHeight = 74f;
         const float PocketMapLineThickness = 2f;
         const float PocketMarkerSize = 24f;
+        const float StandardLabelWidth = 70f;
+        const float StandardContentWidth = 232f;
+        const float StandardColumnSpacing = 6f;
+        const int DefaultPocketIndex = 3;
         static Sprite filledPocketSprite;
         static Sprite ringPocketSprite;
+        static Sprite roundedButtonSprite;
         static readonly Vector2[] PocketMapAnchors =
         {
             new Vector2(0.06f, 0.82f),
@@ -69,6 +74,7 @@ namespace PoolAimTrainer.Puzzles
             EnsureAngleButtonGrid();
             SetupPocketDropdown();
             EnsurePocketMap();
+            ApplyStandardPuzzleLayout();
 
             if (btnTargetNear != null) btnTargetNear.onClick.AddListener(() => SetTargetDist(DistanceOption.Near));
             if (btnTargetMid != null) btnTargetMid.onClick.AddListener(() => SetTargetDist(DistanceOption.Medium));
@@ -182,7 +188,7 @@ namespace PoolAimTrainer.Puzzles
             var labelGo = new GameObject("Lbl", typeof(RectTransform), typeof(LayoutElement));
             labelGo.transform.SetParent(rowGo.transform, false);
             var labelLayout = labelGo.GetComponent<LayoutElement>();
-            labelLayout.preferredWidth = 48f;
+            labelLayout.preferredWidth = StandardLabelWidth;
             labelLayout.flexibleWidth = 0f;
             var label = labelGo.AddComponent<TextMeshProUGUI>();
             label.text = "模式";
@@ -231,7 +237,7 @@ namespace PoolAimTrainer.Puzzles
             angleButtonGrid.constraintCount = AngleButtonColumns;
             angleButtonGrid.spacing = new Vector2(AngleButtonSpacing, AngleButtonSpacing);
             angleButtonGrid.childAlignment = TextAnchor.UpperLeft;
-            angleButtonGrid.cellSize = new Vector2(AngleButtonWidth, AngleButtonHeight);
+            angleButtonGrid.cellSize = new Vector2(GetStandardAngleButtonWidth(), AngleButtonHeight);
 
             angleButtons.Clear();
             for (int i = angleButtonGrid.transform.childCount - 1; i >= 0; i--)
@@ -255,6 +261,7 @@ namespace PoolAimTrainer.Puzzles
         {
             var go = new GameObject("Angle_" + labelText, typeof(RectTransform), typeof(Image), typeof(UnityEngine.UI.Button));
             go.transform.SetParent(parent, false);
+            ConfigureButtonBackground(go.GetComponent<Image>());
 
             var textGo = new GameObject("Text", typeof(RectTransform));
             textGo.transform.SetParent(go.transform, false);
@@ -362,7 +369,7 @@ namespace PoolAimTrainer.Puzzles
             pocketDropdown.ClearOptions();
             var opts = new System.Collections.Generic.List<string> { "Random", "1", "2", "3", "4", "5", "6" };
             pocketDropdown.AddOptions(opts);
-            pocketDropdown.value = 0;
+            pocketDropdown.value = DefaultPocketIndex;
         }
 
         void EnsurePocketMap()
@@ -519,10 +526,179 @@ namespace PoolAimTrainer.Puzzles
             pocketRandomButton.onClick.AddListener(() => SetPocketIndex(0));
         }
 
+        void ApplyStandardPuzzleLayout()
+        {
+            Transform section = transform;
+            Transform tgtLabel = section.Find("LblTgt");
+            Transform cueLabel = section.Find("LblCue");
+
+            ApplyStandardRow(section.Find("ModeRow"), "模式");
+            ApplyStandardRow(section.Find("AngleRow"), "∠1");
+            ApplyStandardRow(section.Find("PocketRow"), "袋口");
+            ApplyStandardRow(section.Find("TgtRow"), GetText(tgtLabel, "子球 → 袋口"));
+            ApplyStandardRow(section.Find("CueRow"), GetText(cueLabel, "主球 → 子球"));
+            HideDetachedLabel(tgtLabel);
+            HideDetachedLabel(cueLabel);
+            HideActionRandomButton();
+            ApplyActionRowStandard(section.Find("ActionRow"));
+        }
+
+        void ApplyStandardRow(Transform row, string labelText)
+        {
+            if (row == null)
+                return;
+
+            var layout = row.GetComponent<HorizontalLayoutGroup>() ?? row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = StandardColumnSpacing;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = true;
+
+            var label = EnsureRowLabel(row, labelText);
+            var content = EnsureRowContent(row);
+            MoveRowChildrenIntoContent(row, label, content);
+            ConfigureLabelColumn(label, labelText);
+            ConfigureContentColumn(content);
+            ConfigureContentLayout(content);
+        }
+
+        Transform EnsureRowLabel(Transform row, string labelText)
+        {
+            Transform label = row.Find("Lbl");
+            if (label != null)
+                return label;
+
+            var labelGo = new GameObject("Lbl", typeof(RectTransform), typeof(LayoutElement));
+            labelGo.transform.SetParent(row, false);
+            var text = labelGo.AddComponent<TextMeshProUGUI>();
+            text.text = labelText;
+            text.fontSize = 13f;
+            text.color = Color.white;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            return labelGo.transform;
+        }
+
+        Transform EnsureRowContent(Transform row)
+        {
+            Transform content = row.Find("Content");
+            if (content != null)
+                return content;
+
+            var contentGo = new GameObject("Content", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            contentGo.transform.SetParent(row, false);
+            return contentGo.transform;
+        }
+
+        void MoveRowChildrenIntoContent(Transform row, Transform label, Transform content)
+        {
+            label.SetSiblingIndex(0);
+            content.SetSiblingIndex(1);
+            var children = new System.Collections.Generic.List<Transform>();
+            foreach (Transform child in row)
+            {
+                if (child == label || child == content)
+                    continue;
+                children.Add(child);
+            }
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                children[i].SetParent(content, false);
+                children[i].SetSiblingIndex(i);
+            }
+        }
+
+        void ConfigureLabelColumn(Transform label, string labelText)
+        {
+            var layout = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = StandardLabelWidth;
+            layout.flexibleWidth = 0f;
+
+            var text = label.GetComponent<TextMeshProUGUI>() ?? label.gameObject.AddComponent<TextMeshProUGUI>();
+            text.text = labelText;
+            text.fontSize = 13f;
+            text.color = Color.white;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.enableWordWrapping = false;
+        }
+
+        void ConfigureContentColumn(Transform content)
+        {
+            var layout = content.GetComponent<LayoutElement>() ?? content.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = StandardContentWidth;
+            layout.flexibleWidth = 0f;
+        }
+
+        void ConfigureContentLayout(Transform content)
+        {
+            var layout = content.GetComponent<HorizontalLayoutGroup>() ?? content.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = StandardColumnSpacing;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+        }
+
+        void ApplyActionRowStandard(Transform row)
+        {
+            if (row == null)
+                return;
+
+            var layout = row.GetComponent<HorizontalLayoutGroup>() ?? row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = StandardColumnSpacing;
+            layout.childAlignment = TextAnchor.MiddleRight;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+
+            var rowLayout = row.GetComponent<LayoutElement>() ?? row.gameObject.AddComponent<LayoutElement>();
+            rowLayout.preferredWidth = StandardContentWidth;
+            rowLayout.flexibleWidth = 0f;
+        }
+
+        static string GetText(Transform label, string fallback)
+        {
+            var text = label != null ? label.GetComponent<TextMeshProUGUI>() : null;
+            return text != null && !string.IsNullOrWhiteSpace(text.text) ? text.text : fallback;
+        }
+
+        static void HideDetachedLabel(Transform label)
+        {
+            if (label == null)
+                return;
+            label.gameObject.SetActive(false);
+            var layout = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+            layout.preferredHeight = 0f;
+            layout.ignoreLayout = true;
+        }
+
+        void HideActionRandomButton()
+        {
+            if (btnRandom == null)
+                return;
+
+            btnRandom.onClick.RemoveAllListeners();
+            btnRandom.gameObject.SetActive(false);
+            var layout = btnRandom.GetComponent<LayoutElement>() ?? btnRandom.gameObject.AddComponent<LayoutElement>();
+            layout.ignoreLayout = true;
+            layout.preferredWidth = 0f;
+            layout.flexibleWidth = 0f;
+        }
+
+        static float GetStandardAngleButtonWidth()
+        {
+            return (StandardContentWidth - AngleButtonSpacing * (AngleButtonColumns - 1)) / AngleButtonColumns;
+        }
+
         UnityEngine.UI.Button CreateTextButton(Transform parent, string name, string labelText, float fontSize)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(UnityEngine.UI.Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
+            ConfigureButtonBackground(go.GetComponent<Image>());
 
             var textGo = new GameObject("Text", typeof(RectTransform));
             textGo.transform.SetParent(go.transform, false);
@@ -539,7 +715,9 @@ namespace PoolAimTrainer.Puzzles
             text.color = Color.white;
             text.raycastTarget = false;
 
-            return go.GetComponent<UnityEngine.UI.Button>();
+            var button = go.GetComponent<UnityEngine.UI.Button>();
+            button.targetGraphic = go.GetComponent<Image>();
+            return button;
         }
 
         static void SetButtonText(UnityEngine.UI.Button button, string labelText)
@@ -618,7 +796,22 @@ namespace PoolAimTrainer.Puzzles
         {
             if (btn == null) return;
             var img = btn.GetComponent<UnityEngine.UI.Image>();
-            if (img != null) img.color = active ? activeColor : inactiveColor;
+            ConfigureButtonBackground(img);
+            var label = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (label == null)
+                return;
+            label.color = active ? activeColor : Color.white;
+            label.fontStyle = active ? FontStyles.Bold : FontStyles.Normal;
+        }
+
+        void ConfigureButtonBackground(Image image)
+        {
+            if (image == null)
+                return;
+
+            image.sprite = GetRoundedButtonSprite();
+            image.type = Image.Type.Sliced;
+            image.color = buttonBackgroundColor;
         }
 
         static void DestroyRuntimeOrImmediate(Object obj)
@@ -675,6 +868,48 @@ namespace PoolAimTrainer.Puzzles
             return sprite;
         }
 
+        static Sprite GetRoundedButtonSprite()
+        {
+            if (roundedButtonSprite != null)
+                return roundedButtonSprite;
+
+            const int size = 32;
+            const float radius = 5f;
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false)
+            {
+                name = "PuzzleRoundedButton",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float dx = Mathf.Max(radius - px, 0f, px - (size - radius));
+                    float dy = Mathf.Max(radius - py, 0f, py - (size - radius));
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(radius + 0.5f - distance);
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            texture.Apply(false, true);
+
+            roundedButtonSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius));
+            roundedButtonSprite.hideFlags = HideFlags.HideAndDontSave;
+            return roundedButtonSprite;
+        }
+
         PuzzleParams BuildParams()
         {
             var p = new PuzzleParams();
@@ -703,6 +938,7 @@ namespace PoolAimTrainer.Puzzles
             if (button == null)
                 return;
 
+            ConfigureActionButtonBackground(button.GetComponent<Image>());
             button.onClick.RemoveListener(OnGenerate);
             button.onClick.AddListener(OnGenerate);
         }
@@ -737,6 +973,8 @@ namespace PoolAimTrainer.Puzzles
 
             var image = go.GetComponent<Image>();
             image.color = new Color(0.85f, 0.25f, 0.25f, 0.95f);
+            image.sprite = GetRoundedButtonSprite();
+            image.type = Image.Type.Sliced;
 
             var button = go.GetComponent<UnityEngine.UI.Button>();
             button.targetGraphic = image;
@@ -757,6 +995,16 @@ namespace PoolAimTrainer.Puzzles
             text.raycastTarget = false;
 
             return button;
+        }
+
+        void ConfigureActionButtonBackground(Image image)
+        {
+            if (image == null)
+                return;
+
+            image.sprite = GetRoundedButtonSprite();
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.85f, 0.25f, 0.25f, 0.95f);
         }
 
         void OnGenerate()
