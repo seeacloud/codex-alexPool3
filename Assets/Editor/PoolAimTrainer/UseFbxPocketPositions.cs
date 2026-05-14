@@ -57,19 +57,31 @@ namespace PoolAimTrainer.EditorTools
             applied += ApplyPosition("Pocket_BM", mapping["BM"], pocketNumber: 5);
             applied += ApplyPosition("Pocket_BL", mapping["BL"], pocketNumber: 6);
 
-            // Update TableController bounds from actual pocket spread.
+            // The FBX pocket centers sit outside the cushion nose line. Store the
+            // playable cushion nose bounds, where the ball surface contacts rubber.
             var tc = table.GetComponent<TableController>();
             if (tc != null)
             {
-                float maxX = 0f, maxZ = 0f;
-                foreach (var item in centers)
-                {
-                    if (Mathf.Abs(item.center.x) > maxX) maxX = Mathf.Abs(item.center.x);
-                    if (Mathf.Abs(item.center.z) > maxZ) maxZ = Mathf.Abs(item.center.z);
-                }
                 Undo.RecordObject(tc, "Update TableController bounds");
-                tc.playfieldHalfLength = maxX;
-                tc.playfieldHalfWidth = maxZ;
+                if (TableMeshBoundsEstimator.TryEstimateBumperNoseBounds(
+                    table.transform,
+                    out float halfLength,
+                    out float halfWidth))
+                {
+                    tc.playfieldHalfLength = halfLength;
+                    tc.playfieldHalfWidth = halfWidth;
+                }
+                else
+                {
+                    float maxX = 0f, maxZ = 0f;
+                    foreach (var item in centers)
+                    {
+                        if (Mathf.Abs(item.center.x) > maxX) maxX = Mathf.Abs(item.center.x);
+                        if (Mathf.Abs(item.center.z) > maxZ) maxZ = Mathf.Abs(item.center.z);
+                    }
+                    tc.playfieldHalfLength = Mathf.Max(0f, maxX - tc.ballRadius);
+                    tc.playfieldHalfWidth = Mathf.Max(0f, maxZ - tc.ballRadius);
+                }
                 EditorUtility.SetDirty(tc);
             }
 

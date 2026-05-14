@@ -16,8 +16,9 @@ namespace PoolAimTrainer.EditorTools
 {
     public static class SetupUnifiedUI
     {
-        const int HUD_RT_SIZE = 256;
-        const float PANEL_WIDTH = 220f;
+        const int HUD_RT_SIZE = 512;
+        const float PANEL_WIDTH = 330f;
+        const float HUD_IMAGE_HEIGHT = 190f;
 
         [MenuItem("PoolAimTrainer/Setup Unified UI")]
         public static void Setup()
@@ -44,8 +45,8 @@ namespace PoolAimTrainer.EditorTools
         {
             string[] names =
             {
-                "BtnTopDown", "BtnShot", "BtnGhost",
-                "AimHudPanel", "PuzzlePanel", "LeftToolbar", "RightPanel",
+                "BtnTopDown", "BtnMainGenerate", "BtnShot", "BtnGhost",
+                "AimHudPanel", "PuzzlePanel", "LeftToolbar", "RightPanel", "RightPanelToggleButton",
                 "BtnH", "BtnG", "BtnL", "BtnV"
             };
             foreach (var n in names)
@@ -79,10 +80,10 @@ namespace PoolAimTrainer.EditorTools
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var btnTop = CreateToolbarButton(toolbar.transform, "BtnTopDown", "Top", new Color(0.3f, 0.3f, 0.3f, 0.9f));
+            CreateToolbarButton(toolbar.transform, "BtnMainGenerate", "出题", new Color(0.85f, 0.25f, 0.25f, 0.95f));
             var btnHit = CreateToolbarButton(toolbar.transform, "BtnShot", "Hit", new Color(0.85f, 0.25f, 0.25f, 0.95f));
-            var btnGhost = CreateToolbarButton(toolbar.transform, "BtnGhost", "Ghost ON", new Color(0.3f, 0.3f, 0.3f, 0.9f));
 
-            BindToolbarButtons(btnTop, btnHit, btnGhost);
+            BindToolbarButtons(btnTop, btnHit);
         }
 
         static GameObject CreateToolbarButton(Transform parent, string name, string label, Color bg)
@@ -114,7 +115,7 @@ namespace PoolAimTrainer.EditorTools
             return go;
         }
 
-        static void BindToolbarButtons(GameObject topGo, GameObject hitGo, GameObject ghostGo)
+        static void BindToolbarButtons(GameObject topGo, GameObject hitGo)
         {
             var mainCam = Camera.main;
             var orbit = mainCam != null ? mainCam.GetComponent<CameraOrbit>() : null;
@@ -134,9 +135,6 @@ namespace PoolAimTrainer.EditorTools
             hitBtn.table = table;
             if (cue != null) hitBtn.cueBall = cue.GetComponent<BallController>();
             if (target != null) hitBtn.targetBall = target.GetComponent<BallController>();
-
-            var ghostBtn = ghostGo.GetComponent<GhostToggleButton>() ?? ghostGo.AddComponent<GhostToggleButton>();
-            ghostBtn.aimManager = aim;
         }
 
         // ============ Right Panel (auto vertical layout with content fitter) ============
@@ -173,6 +171,38 @@ namespace PoolAimTrainer.EditorTools
 
             BuildHUDSection(panel.transform);
             BuildPuzzleSection(panel.transform);
+            CreateRightPanelToggleButton(parent);
+        }
+
+        static void CreateRightPanelToggleButton(Transform parent)
+        {
+            var go = new GameObject("RightPanelToggleButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(1f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.anchoredPosition = new Vector2(-10f, -10f);
+            rt.sizeDelta = new Vector2(32f, 28f);
+
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.18f, 0.18f, 0.18f, 0.95f);
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+
+            var txtGo = new GameObject("Text", typeof(RectTransform));
+            txtGo.transform.SetParent(go.transform, false);
+            var txtRT = txtGo.GetComponent<RectTransform>();
+            txtRT.anchorMin = Vector2.zero;
+            txtRT.anchorMax = Vector2.one;
+            txtRT.offsetMin = Vector2.zero;
+            txtRT.offsetMax = Vector2.zero;
+            var tmp = txtGo.AddComponent<TextMeshProUGUI>();
+            tmp.text = "<";
+            tmp.fontSize = 18f;
+            tmp.color = Color.white;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.raycastTarget = false;
         }
 
         // ============ HUD Section ============
@@ -208,20 +238,17 @@ namespace PoolAimTrainer.EditorTools
             // Title
             CreateLabel(section.transform, "Title", "瞄准 HUD", 14f, TextAlignmentOptions.Center, 20f);
 
-            // Square aspect ratio image
             var imgGo = new GameObject("RawImage", typeof(RectTransform));
             imgGo.transform.SetParent(section.transform, false);
             var imgLE = imgGo.AddComponent<LayoutElement>();
-            imgLE.preferredHeight = PANEL_WIDTH - 32f; // square-ish based on panel width
-            var aspect = imgGo.AddComponent<AspectRatioFitter>();
-            aspect.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
-            aspect.aspectRatio = 1f;
+            imgLE.preferredHeight = HUD_IMAGE_HEIGHT;
             var rawImage = imgGo.AddComponent<RawImage>();
             rawImage.texture = rt;
             rawImage.raycastTarget = true;
 
             var hBar = MakeCrosshairBar(imgGo.transform, "CrosshairH", true);
             var vBar = MakeCrosshairBar(imgGo.transform, "CrosshairV", false);
+            var idealVBar = MakeIdealAnswerBar(imgGo.transform);
 
             // Offset label
             var offsetLabel = CreateLabel(section.transform, "OffsetLabel", "dx = 0.0 mm", 13f, TextAlignmentOptions.Center, 18f);
@@ -229,7 +256,9 @@ namespace PoolAimTrainer.EditorTools
             // Nudge buttons row
             var nudgeRow = CreateHorizontalRow(section.transform, "NudgeRow", 6f, 28f);
             var leftBtn = CreateRowButton(nudgeRow.transform, "BtnNudgeLeft", "<", new Color(0.25f, 0.25f, 0.25f, 0.85f), 18f);
+            var submitBtn = CreateRowButton(nudgeRow.transform, "BtnSubmitAnswer", "提交", new Color(0.25f, 0.45f, 0.85f, 0.95f), 15f);
             var rightBtn = CreateRowButton(nudgeRow.transform, "BtnNudgeRight", ">", new Color(0.25f, 0.25f, 0.25f, 0.85f), 18f);
+            var examResultLabel = CreateLabel(section.transform, "ExamResultLabel", "", 12f, TextAlignmentOptions.Center, 18f);
 
             // Controller
             var ctrl = section.AddComponent<AimHudController>();
@@ -242,12 +271,23 @@ namespace PoolAimTrainer.EditorTools
             ctrl.orthoSize = 0.08f;
             ctrl.crosshairHBar = hBar.GetComponent<RectTransform>();
             ctrl.crosshairVBar = vBar.GetComponent<RectTransform>();
+            ctrl.idealAnswerVBar = idealVBar.GetComponent<RectTransform>();
             ctrl.ballDiameter = 0.0572f;
             ctrl.crosshairVerticalExtraMeters = 0.010f;
             ctrl.offsetLabel = offsetLabel.GetComponent<TextMeshProUGUI>();
             ctrl.nudgeLeftBtn = leftBtn.GetComponent<Button>();
             ctrl.nudgeRightBtn = rightBtn.GetComponent<Button>();
             ctrl.hudContent = section;
+
+            var training = gm.GetComponent<TrainingModeController>() ?? gm.AddComponent<TrainingModeController>();
+            training.aimManager = gm.GetComponent<AimManager>();
+            training.shotSimulator = gm.GetComponent<ShotSimulator>();
+            training.table = Object.FindObjectOfType<TableController>();
+            training.cueBall = cueGo.GetComponent<BallController>();
+            training.targetBall = targetGo.GetComponent<BallController>();
+            training.aimHud = ctrl;
+            training.submitButton = submitBtn.GetComponent<Button>();
+            training.resultLabel = examResultLabel.GetComponent<TextMeshProUGUI>();
         }
 
         static GameObject MakeCrosshairBar(Transform parent, string name, bool horizontal)
@@ -277,6 +317,23 @@ namespace PoolAimTrainer.EditorTools
             return go;
         }
 
+        static GameObject MakeIdealAnswerBar(Transform parent)
+        {
+            var go = new GameObject("IdealAnswerV", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(0f, 0f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(3f, 60f);
+
+            var img = go.AddComponent<Image>();
+            img.color = new Color(0.65f, 1f, 0f, 0.95f);
+            img.raycastTarget = false;
+            go.SetActive(false);
+            return go;
+        }
+
         // ============ Puzzle Section ============
         static void BuildPuzzleSection(Transform parent)
         {
@@ -297,9 +354,14 @@ namespace PoolAimTrainer.EditorTools
 
             CreateLabel(section.transform, "Title", "出题", 15f, TextAlignmentOptions.Center, 22f);
 
+            var modeRow = CreateHorizontalRow(section.transform, "ModeRow", 6f, 26f);
+            CreateLabel(modeRow.transform, "Lbl", "模式", 13f, TextAlignmentOptions.MidlineLeft, 26f, 48f);
+            var btnStudyMode = CreateRowButton(modeRow.transform, "BtnStudyMode", "学习", new Color(0.2f, 0.8f, 0.4f, 1f), 14f);
+            var btnExamMode = CreateRowButton(modeRow.transform, "BtnExamMode", "考试", new Color(0.3f, 0.3f, 0.3f, 0.8f), 14f);
+
             // Angle row
             var angleRow = CreateHorizontalRow(section.transform, "AngleRow", 6f, 26f);
-            CreateLabel(angleRow.transform, "Lbl", "切角", 13f, TextAlignmentOptions.MidlineLeft, 26f, 48f);
+            CreateLabel(angleRow.transform, "Lbl", "∠1", 13f, TextAlignmentOptions.MidlineLeft, 26f, 48f);
             var angleDD = CreateDropdown(angleRow.transform);
 
             // Pocket row
@@ -325,6 +387,9 @@ namespace PoolAimTrainer.EditorTools
 
             var ui = section.AddComponent<PuzzleUI>();
             ui.generator = generator;
+            ui.trainingModeController = gm != null ? gm.GetComponent<TrainingModeController>() : null;
+            ui.btnStudyMode = btnStudyMode.GetComponent<Button>();
+            ui.btnExamMode = btnExamMode.GetComponent<Button>();
             ui.angleDropdown = angleDD;
             ui.pocketDropdown = pocketDD;
             ui.btnTargetNear = btnTN.GetComponent<Button>();
@@ -334,6 +399,9 @@ namespace PoolAimTrainer.EditorTools
             ui.btnCueMid = btnCM.GetComponent<Button>();
             ui.btnCueFar = btnCF.GetComponent<Button>();
             ui.btnGenerate = btnGen.GetComponent<Button>();
+            var mainGenerate = GameObject.Find("BtnMainGenerate");
+            if (mainGenerate != null)
+                ui.btnMainGenerate = mainGenerate.GetComponent<Button>();
             ui.btnRandom = btnRnd.GetComponent<Button>();
         }
 

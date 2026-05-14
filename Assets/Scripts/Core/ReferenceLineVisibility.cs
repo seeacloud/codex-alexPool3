@@ -227,6 +227,7 @@ namespace PoolAimTrainer.Core
                 ReferenceVisualLayer.CueToGhost => "白线 主球-Ghost",
                 ReferenceVisualLayer.ObjectToPocket => "绿线 子球-袋口",
                 ReferenceVisualLayer.CueThroughTarget => "红线 主球穿子球",
+                ReferenceVisualLayer.MirroredCueThroughTarget => "镜像红线",
                 ReferenceVisualLayer.TargetBallPath => "橙线 模拟子球",
                 ReferenceVisualLayer.ManualCuePath => "蓝线 手动击球",
                 ReferenceVisualLayer.EstimatedAimLine => "洋红线 估瞄线",

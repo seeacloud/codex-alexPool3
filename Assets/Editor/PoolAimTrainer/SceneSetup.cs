@@ -45,9 +45,17 @@ namespace PoolAimTrainer.EditorTools
             table.name = "Pool-Table";
             table.transform.position = Vector3.zero;
             var tc = table.AddComponent<TableController>();
-            tc.playfieldHalfLength = HalfLength;
-            tc.playfieldHalfWidth = HalfWidth;
+            tc.playfieldHalfLength = HalfLength - BallRadius;
+            tc.playfieldHalfWidth = HalfWidth - BallRadius;
             tc.ballRadius = BallRadius;
+            if (TableMeshBoundsEstimator.TryEstimateBumperNoseBounds(
+                table.transform,
+                out float halfLength,
+                out float halfWidth))
+            {
+                tc.playfieldHalfLength = halfLength;
+                tc.playfieldHalfWidth = halfWidth;
+            }
 
             CreatePocket("Pocket_TL", table.transform, new Vector3(-HalfLength, BallRadius,  HalfWidth));
             CreatePocket("Pocket_TR", table.transform, new Vector3( HalfLength, BallRadius,  HalfWidth));

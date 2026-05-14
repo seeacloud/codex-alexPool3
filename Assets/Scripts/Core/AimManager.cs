@@ -24,6 +24,7 @@ namespace PoolAimTrainer.Core
         public TrajectorySnapshotRenderer snapshotRenderer;
         public PottingToleranceFanRenderer toleranceFanRenderer;
         public CueThroughTargetLineRenderer cueThroughTargetRenderer;
+        public MirroredCueThroughLineRenderer mirroredCueThroughRenderer;
         public EstimatedAimLineRenderer estimatedAimLineRenderer;
         public CutAngleArcRenderer cutAngleArcRenderer;
         public AimVsTargetArcRenderer aimVsTargetArcRenderer;
@@ -106,7 +107,7 @@ namespace PoolAimTrainer.Core
             if (cueThroughTargetRenderer != null && cutAngleArcRenderer != null
                 && aimVsTargetArcRenderer != null && snapshotRenderer != null
                 && toleranceFanRenderer != null && estimatedAimLineRenderer != null
-                && targetLineAngleArcRenderer != null) return;
+                && mirroredCueThroughRenderer != null && targetLineAngleArcRenderer != null) return;
             GameObject host = GameObject.Find("_Visualization");
             if (host == null) host = gameObject;
             if (cueThroughTargetRenderer == null)
@@ -114,6 +115,12 @@ namespace PoolAimTrainer.Core
                 cueThroughTargetRenderer = host.GetComponent<CueThroughTargetLineRenderer>();
                 if (cueThroughTargetRenderer == null)
                     cueThroughTargetRenderer = host.AddComponent<CueThroughTargetLineRenderer>();
+            }
+            if (mirroredCueThroughRenderer == null)
+            {
+                mirroredCueThroughRenderer = host.GetComponent<MirroredCueThroughLineRenderer>();
+                if (mirroredCueThroughRenderer == null)
+                    mirroredCueThroughRenderer = host.AddComponent<MirroredCueThroughLineRenderer>();
             }
             if (cutAngleArcRenderer == null)
             {
@@ -340,18 +347,32 @@ namespace PoolAimTrainer.Core
         void UpdateCueThroughTarget()
         {
             AutoWireCueThroughTarget();
-            if (cueThroughTargetRenderer == null) return;
+            if (cueThroughTargetRenderer == null && mirroredCueThroughRenderer == null) return;
             Vector3 cue = cueBall.Center;
             Vector3 tgt = targetBall.Center;
             Vector3 dir = tgt - cue;
             if (dir.sqrMagnitude < 1e-6f)
             {
-                cueThroughTargetRenderer.Hide();
+                if (cueThroughTargetRenderer != null) cueThroughTargetRenderer.Hide();
+                if (mirroredCueThroughRenderer != null) mirroredCueThroughRenderer.Hide();
                 return;
             }
             dir = dir.normalized;
-            Vector3 railHit = ClipRayAtTable(tgt, dir, table);
-            cueThroughTargetRenderer.Show(cue, tgt, railHit);
+            if (cueThroughTargetRenderer != null)
+            {
+                Vector3 railHit = ClipRayAtTable(tgt, dir, table);
+                cueThroughTargetRenderer.Show(cue, tgt, railHit);
+            }
+
+            if (mirroredCueThroughRenderer != null && currentPocket != null)
+            {
+                Vector3 pottingPoint = GetPottingPointFor(currentPocket);
+                mirroredCueThroughRenderer.Show(cue, tgt, pottingPoint, table.ballRadius, table);
+            }
+            else if (mirroredCueThroughRenderer != null)
+            {
+                mirroredCueThroughRenderer.Hide();
+            }
         }
 
         static Vector3 ClipRayAtTable(Vector3 start, Vector3 dir, TableController table)
@@ -457,6 +478,7 @@ namespace PoolAimTrainer.Core
                 if (cutAngleArcRenderer != null) cutAngleArcRenderer.Hide();
                 if (toleranceFanRenderer != null) toleranceFanRenderer.Hide();
                 if (estimatedAimLineRenderer != null) estimatedAimLineRenderer.Hide();
+                if (mirroredCueThroughRenderer != null) mirroredCueThroughRenderer.Hide();
                 if (targetLineAngleArcRenderer != null) targetLineAngleArcRenderer.Hide();
                 if (hintPanel != null) hintPanel.Clear();
                 return;
@@ -471,6 +493,7 @@ namespace PoolAimTrainer.Core
                 if (cutAngleArcRenderer != null) cutAngleArcRenderer.Hide();
                 if (toleranceFanRenderer != null) toleranceFanRenderer.Hide();
                 if (estimatedAimLineRenderer != null) estimatedAimLineRenderer.Hide();
+                if (mirroredCueThroughRenderer != null) mirroredCueThroughRenderer.Hide();
                 if (targetLineAngleArcRenderer != null) targetLineAngleArcRenderer.Hide();
                 if (hintPanel != null) hintPanel.Clear();
                 return;

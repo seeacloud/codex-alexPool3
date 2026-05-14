@@ -15,5 +15,6 @@ namespace PoolAimTrainer.Core
         ToleranceFanArea,
         ToleranceLowerTargetPath,
         ToleranceUpperTargetPath,
+        MirroredCueThroughTarget,
     }
 }

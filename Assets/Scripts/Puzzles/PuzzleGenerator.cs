@@ -1,6 +1,7 @@
 using UnityEngine;
 using PoolAimTrainer.Core;
 using PoolAimTrainer.SceneObjects;
+using PoolAimTrainer.Trajectory;
 
 namespace PoolAimTrainer.Puzzles
 {
@@ -12,6 +13,8 @@ namespace PoolAimTrainer.Puzzles
         public AimManager aimManager;
 
         const float BALL_RADIUS = 0.0286f;
+        const float POCKET_CATCH_R = 0.06f;
+        const float JAW_GAP = 0.08f;
         const int MAX_DIRECTION_ATTEMPTS = 36;
         const int MAX_FALLBACK_ATTEMPTS = 5;
 
@@ -55,7 +58,9 @@ namespace PoolAimTrainer.Puzzles
 
         bool TryPlace(int pocketIdx, float cutAngleDeg, float dTargetPocket, float dCueTarget)
         {
-            Vector3 pocketPos = table.Pockets[pocketIdx].Position;
+            TableGeometry.PocketMouth mouth = TableGeometry.BuildPocketMouth(table, pocketIdx, JAW_GAP);
+            Vector3 pocketSeed = (mouth.p1 + mouth.p2) * 0.5f;
+            pocketSeed.y = BALL_RADIUS;
 
             int[] directions = ShuffledDirections();
 
@@ -64,26 +69,42 @@ namespace PoolAimTrainer.Puzzles
                 float theta = directions[d] * Mathf.Deg2Rad;
                 Vector3 dir = new Vector3(Mathf.Cos(theta), 0f, Mathf.Sin(theta));
 
-                Vector3 targetPos = pocketPos + dir * dTargetPocket;
+                Vector3 targetPos = pocketSeed + dir * dTargetPocket;
                 targetPos.y = BALL_RADIUS;
 
                 if (!IsInsidePlayfield(targetPos)) continue;
 
-                Vector3 pocketDir = (pocketPos - targetPos).normalized;
+                Vector3 pottingPoint = TableGeometry.GetPottingPoint(table, pocketIdx, targetPos, JAW_GAP);
+                pottingPoint.y = BALL_RADIUS;
+                Vector3 pocketDir = pottingPoint - targetPos;
+                pocketDir.y = 0f;
+                if (pocketDir.sqrMagnitude < 1e-8f) continue;
+                pocketDir.Normalize();
                 Vector3 ghostPos = targetPos - pocketDir * (2f * BALL_RADIUS);
 
                 // Try both left and right cut
                 for (int sign = -1; sign <= 1; sign += 2)
                 {
-                    float angleRad = cutAngleDeg * Mathf.Deg2Rad * sign;
-                    Vector3 cueDir = RotateY(pocketDir, angleRad);
-                    Vector3 cuePos = ghostPos - cueDir * dCueTarget;
+                    Vector3 cuePos = ComputeCuePositionForRedGreenAngle(
+                        targetPos, pocketDir, cutAngleDeg, dCueTarget, sign);
                     cuePos.y = BALL_RADIUS;
 
                     if (!IsInsidePlayfield(cuePos)) continue;
 
                     // Ensure cue ball doesn't overlap target ball
                     if (Vector3.Distance(cuePos, targetPos) < 2f * BALL_RADIUS + 0.01f) continue;
+
+                    // Pooltool-style physical pocketability check: the target ball's
+                    // swept cylinder along pocketDir must enter the pocket disc
+                    // before colliding with any cushion segment.
+                    int pIdx;
+                    if (!ShotSimulator.CanBallReachPocket(targetPos, pocketDir, table,
+                        BALL_RADIUS, POCKET_CATCH_R, JAW_GAP, out pIdx)) continue;
+                    if (pIdx != pocketIdx) continue; // wrong pocket
+
+                    // Cue ball must reach ghost without cushion contact.
+                    if (!ShotSimulator.PathClearToPoint(cuePos, ghostPos, table, BALL_RADIUS, JAW_GAP))
+                        continue;
 
                     // Success — place balls
                     cueBall.MoveTo(cuePos);
@@ -101,10 +122,37 @@ namespace PoolAimTrainer.Puzzles
             return false;
         }
 
+        public static Vector3 ComputeCuePositionForRedGreenAngle(
+            Vector3 targetPos,
+            Vector3 objectToPocketDir,
+            float redGreenAngleDeg,
+            float cueTargetDistance,
+            int sign)
+        {
+            objectToPocketDir.y = 0f;
+            if (objectToPocketDir.sqrMagnitude < 1e-8f)
+                return targetPos;
+
+            objectToPocketDir.Normalize();
+            float signedAngleRad = redGreenAngleDeg * Mathf.Deg2Rad * (sign < 0 ? -1f : 1f);
+            Vector3 redDir = RotateY(objectToPocketDir, signedAngleRad).normalized;
+            Vector3 cuePos = targetPos - redDir * cueTargetDistance;
+            cuePos.y = targetPos.y;
+            return cuePos;
+        }
+
         int ResolvePocketIndex(int requested)
         {
             if (requested >= 1 && requested <= table.Pockets.Count)
+            {
+                for (int i = 0; i < table.Pockets.Count; i++)
+                {
+                    if (table.Pockets[i] != null && table.Pockets[i].pocketNumber == requested)
+                        return i;
+                }
+
                 return requested - 1;
+            }
             return Random.Range(0, table.Pockets.Count);
         }
 

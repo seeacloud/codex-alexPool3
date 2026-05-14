@@ -17,7 +17,7 @@ namespace PoolAimTrainer.Visualization
         [Tooltip("普通快照球相对真实球直径的缩放")]
         public float snapshotScaleMultiplier = 0.9f;
         [Tooltip("碰撞接触点小标记相对真实球直径的缩放")]
-        public float contactMarkerScaleMultiplier = 0.1f;
+        public float contactMarkerScaleMultiplier = 0.05f;
         [Tooltip("快照之间、快照与真实球/碰撞点之间至少间隔多少个球半径")]
         public float minSnapshotSpacingRadii = 1.7f;
 
@@ -32,6 +32,9 @@ namespace PoolAimTrainer.Visualization
         readonly List<GameObject> targetSnapshots = new List<GameObject>();
         GameObject collisionCueSnapshot;
         GameObject contactMarker;
+
+        public GameObject CurrentCollisionCueSnapshot => collisionCueSnapshot;
+        public GameObject CurrentContactMarker => contactMarker;
 
         public void Show(SimulationResult result, float ballRadius)
         {

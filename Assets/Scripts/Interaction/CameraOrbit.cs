@@ -10,8 +10,10 @@ namespace PoolAimTrainer.Interaction
         public float pitchDegrees = 55f;
         public float rotateSpeed = 4f;
         public float zoomSpeed = 0.3f;
-        public float minDistance = 0.8f;
+        public float minDistance = 0.5333334f;
         public float maxDistance = 4f;
+        public float minPitchDegrees = 2f;
+        public float maxPitchDegrees = 85f;
         public float panSpeed = 0.002f;
 
         [HideInInspector] public Vector3 panOffset;
@@ -31,6 +33,9 @@ namespace PoolAimTrainer.Interaction
         float savedYaw;
         float savedPitch;
         Vector3 savedPanOffset;
+        bool savedOrthographic;
+        float savedOrthographicSize;
+        Camera controlledCamera;
 
         // Transition state
         bool transitioning;
@@ -42,6 +47,10 @@ namespace PoolAimTrainer.Interaction
 
         public void SetTopDown(bool on)
         {
+            if (isTopDown == on) return;
+
+            CacheCamera();
+
             if (on)
             {
                 savedDistance = distance;
@@ -51,6 +60,7 @@ namespace PoolAimTrainer.Interaction
                 topDownHeight = distance;
                 topDownRotation = 0f;
                 panOffset = Vector3.zero;
+                SaveAndApplyTopDownProjection();
             }
             else
             {
@@ -58,6 +68,7 @@ namespace PoolAimTrainer.Interaction
                 yawDegrees = savedYaw;
                 pitchDegrees = savedPitch;
                 panOffset = Vector3.zero;
+                RestoreProjection();
             }
 
             isTopDown = on;
@@ -77,6 +88,38 @@ namespace PoolAimTrainer.Interaction
             transitionEndRot = ComputeTargetRotation();
             transitionT = 0f;
             transitioning = true;
+        }
+
+        void CacheCamera()
+        {
+            if (controlledCamera == null)
+                controlledCamera = GetComponent<Camera>();
+        }
+
+        void SaveAndApplyTopDownProjection()
+        {
+            if (controlledCamera == null) return;
+
+            savedOrthographic = controlledCamera.orthographic;
+            savedOrthographicSize = controlledCamera.orthographicSize;
+            controlledCamera.orthographic = true;
+            ApplyTopDownOrthographicSize();
+        }
+
+        void RestoreProjection()
+        {
+            if (controlledCamera == null) return;
+
+            controlledCamera.orthographic = savedOrthographic;
+            controlledCamera.orthographicSize = savedOrthographicSize;
+        }
+
+        void ApplyTopDownOrthographicSize()
+        {
+            if (controlledCamera == null) return;
+
+            float halfFovRadians = controlledCamera.fieldOfView * 0.5f * Mathf.Deg2Rad;
+            controlledCamera.orthographicSize = Mathf.Max(0.001f, topDownHeight * Mathf.Tan(halfFovRadians));
         }
 
         Vector3 ComputeTargetPosition()
@@ -136,6 +179,7 @@ namespace PoolAimTrainer.Interaction
                 topDownRotation += delta.x * topDownRotateSpeed * 0.01f;
 
             topDownHeight = Mathf.Clamp(topDownHeight - InputRouter.ScrollDelta.y * zoomSpeed, minDistance, maxDistance);
+            ApplyTopDownOrthographicSize();
 
             Vector3 center = (pivot != null ? pivot.position : Vector3.zero) + panOffset;
             transform.position = center + Vector3.up * topDownHeight;
@@ -156,7 +200,7 @@ namespace PoolAimTrainer.Interaction
             if (delta.sqrMagnitude > 0.01f)
             {
                 yawDegrees += delta.x * rotateSpeed * 0.1f;
-                pitchDegrees = Mathf.Clamp(pitchDegrees - delta.y * rotateSpeed * 0.1f, 15f, 85f);
+                pitchDegrees = Mathf.Clamp(pitchDegrees - delta.y * rotateSpeed * 0.1f, minPitchDegrees, maxPitchDegrees);
             }
 
             distance = Mathf.Clamp(distance - InputRouter.ScrollDelta.y * zoomSpeed, minDistance, maxDistance);

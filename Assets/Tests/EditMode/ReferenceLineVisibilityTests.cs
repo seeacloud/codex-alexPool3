@@ -211,7 +211,7 @@ namespace PoolAimTrainer.Tests.EditMode
             var hudLayout = hudImage.GetComponent<LayoutElement>();
             Assert.That(rightPanelRect.sizeDelta.x, Is.EqualTo(330f).Within(0.01f));
             Assert.That(rightPanelLayout.preferredWidth, Is.EqualTo(330f).Within(0.01f));
-            Assert.That(hudLayout.preferredHeight, Is.EqualTo(298f).Within(0.01f));
+            Assert.That(hudLayout.preferredHeight, Is.EqualTo(190f).Within(0.01f));
             Assert.That(root.transform.Find("RightPanelToggleButton"), Is.Not.Null);
         }
 
@@ -253,6 +253,43 @@ namespace PoolAimTrainer.Tests.EditMode
             Assert.That(grid, Is.Not.Null);
             Assert.That(grid.constraint, Is.EqualTo(GridLayoutGroup.Constraint.FixedColumnCount));
             Assert.That(grid.constraintCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TogglePanel_MakesPuzzleAndReferenceSectionsCollapsible()
+        {
+            root = new GameObject("Canvas", typeof(Canvas));
+            var rightPanel = new GameObject("RightPanel", typeof(RectTransform));
+            rightPanel.transform.SetParent(root.transform, false);
+
+            var puzzleSection = new GameObject("PuzzleSection", typeof(RectTransform));
+            puzzleSection.transform.SetParent(rightPanel.transform, false);
+            var puzzleTitle = new GameObject("Title", typeof(RectTransform));
+            puzzleTitle.transform.SetParent(puzzleSection.transform, false);
+            puzzleTitle.AddComponent<TMPro.TextMeshProUGUI>().text = "出题";
+            var puzzleBody = new GameObject("ModeRow", typeof(RectTransform));
+            puzzleBody.transform.SetParent(puzzleSection.transform, false);
+
+            var visibility = CreateTestVisibility(root);
+            var togglePanel = root.AddComponent<ReferenceLineTogglePanel>();
+            togglePanel.visibility = visibility;
+
+            togglePanel.BuildPanel();
+
+            var puzzleButton = puzzleTitle.GetComponent<Button>();
+            Assert.That(puzzleButton, Is.Not.Null);
+            puzzleButton.onClick.Invoke();
+            Assert.That(puzzleTitle.activeSelf, Is.True);
+            Assert.That(puzzleBody.activeSelf, Is.False);
+
+            Transform referencePanel = rightPanel.transform.Find("ReferenceLineTogglePanel");
+            var referenceTitle = referencePanel.Find("Title").gameObject;
+            var referenceGrid = referencePanel.Find("LayersGrid").gameObject;
+            var referenceButton = referenceTitle.GetComponent<Button>();
+            Assert.That(referenceButton, Is.Not.Null);
+            referenceButton.onClick.Invoke();
+            Assert.That(referenceTitle.activeSelf, Is.True);
+            Assert.That(referenceGrid.activeSelf, Is.False);
         }
 
         [Test]
@@ -305,6 +342,149 @@ namespace PoolAimTrainer.Tests.EditMode
             Assert.That(FindLine(root.transform, "LR_EstimatedAimLine").enabled, Is.False);
         }
 
+        [Test]
+        public void MirroredCueThroughLineRenderer_ChoosesSideThatBracketsPocketDirection()
+        {
+            root = new GameObject("MirroredCueThroughLineRoot");
+            CreateTestVisibility(root);
+            var table = root.AddComponent<TableController>();
+            table.playfieldHalfLength = 2f;
+            table.playfieldHalfWidth = 1f;
+            table.ballRadius = 0.0286f;
+            var renderer = root.AddComponent<MirroredCueThroughLineRenderer>();
+            InvokeAwake(renderer);
+
+            renderer.Show(
+                new Vector3(0f, table.ballRadius, 0f),
+                new Vector3(1f, table.ballRadius, 0f),
+                new Vector3(1f, table.ballRadius, 1f),
+                table.ballRadius,
+                table);
+
+            LineRenderer line = FindLine(root.transform, "LR_MirroredCueThrough");
+            Assert.That(line.enabled, Is.True);
+            Assert.That(line.positionCount, Is.EqualTo(3));
+            AssertVector(new Vector3(1f + table.ballRadius, table.ballRadius, 0f), line.GetPosition(0), "bracketing mirrored hit");
+            AssertVector(new Vector3(1f, table.ballRadius, 0f), line.GetPosition(1), "target center");
+            AssertVector(new Vector3(-2f, table.ballRadius, 0f), line.GetPosition(2), "rail");
+        }
+
+        [Test]
+        public void MirroredCueThroughLineRenderer_RespectsIndependentToggle()
+        {
+            root = new GameObject("MirroredCueThroughLineToggleRoot");
+            var visibility = CreateTestVisibility(root);
+            visibility.SetLayerVisible(ReferenceVisualLayer.MirroredCueThroughTarget, false);
+            var table = root.AddComponent<TableController>();
+            table.playfieldHalfLength = 2f;
+            table.playfieldHalfWidth = 1f;
+            table.ballRadius = 0.0286f;
+            var renderer = root.AddComponent<MirroredCueThroughLineRenderer>();
+            InvokeAwake(renderer);
+
+            renderer.Show(
+                new Vector3(0f, table.ballRadius, 0f),
+                new Vector3(1f, table.ballRadius, 0f),
+                new Vector3(1f, table.ballRadius, 1f),
+                table.ballRadius,
+                table);
+
+            Assert.That(FindLine(root.transform, "LR_MirroredCueThrough").enabled, Is.False);
+        }
+
+        [Test]
+        public void MirroredCueThroughLineRenderer_UsesSameColorAsRedLine()
+        {
+            root = new GameObject("MirroredCueThroughLineStyleRoot");
+            CreateTestVisibility(root);
+            var renderer = root.AddComponent<MirroredCueThroughLineRenderer>();
+
+            InvokeAwake(renderer);
+
+            LineRenderer line = FindLine(root.transform, "LR_MirroredCueThrough");
+            Assert.That(line.startColor.r, Is.EqualTo(1.8f).Within(0.001f));
+            Assert.That(line.startColor.g, Is.EqualTo(0.12f).Within(0.001f));
+            Assert.That(line.startColor.b, Is.EqualTo(0.65f).Within(0.001f));
+            Assert.That(line.sharedMaterial.color.r, Is.EqualTo(1.8f).Within(0.001f));
+            Assert.That(line.sharedMaterial.color.g, Is.EqualTo(0.12f).Within(0.001f));
+            Assert.That(line.sharedMaterial.color.b, Is.EqualTo(0.65f).Within(0.001f));
+        }
+
+        [Test]
+        public void CueThroughTargetLineRenderer_UsesBrightReadableRedColorWithoutChangingWidth()
+        {
+            root = new GameObject("CueThroughTargetStyleRoot");
+            CreateTestVisibility(root);
+            var renderer = root.AddComponent<CueThroughTargetLineRenderer>();
+            renderer.lineColor = new Color(0.35f, 0f, 0f, 1f);
+            renderer.lineWidth = 0.0005f;
+
+            InvokeAwake(renderer);
+
+            LineRenderer line = FindLine(root.transform, "LR_CueThroughTarget");
+            Assert.That(line.startColor.r, Is.GreaterThanOrEqualTo(1.5f));
+            Assert.That(line.startColor.g, Is.GreaterThanOrEqualTo(0.1f));
+            Assert.That(line.startColor.b, Is.GreaterThanOrEqualTo(0.6f));
+            Assert.That(line.sharedMaterial.color.r, Is.GreaterThanOrEqualTo(1.5f));
+            Assert.That(line.startWidth, Is.EqualTo(0.0005f).Within(0.0001f));
+            Assert.That(line.endWidth, Is.EqualTo(line.startWidth).Within(0.0001f));
+        }
+
+        [Test]
+        public void LineWidthCompensator_ScalesDashTextureWithCameraDistance()
+        {
+            root = new GameObject("DashScaleRoot");
+            var cameraGo = new GameObject("Main Camera");
+            cameraGo.transform.SetParent(root.transform, false);
+            cameraGo.tag = "MainCamera";
+            cameraGo.transform.position = new Vector3(0f, 0f, -5f);
+            cameraGo.AddComponent<Camera>();
+
+            var lineGo = new GameObject("LineHost");
+            lineGo.transform.SetParent(root.transform, false);
+            var line = lineGo.AddComponent<LineRenderer>();
+            line.startWidth = 0.0005f;
+            line.endWidth = 0.0005f;
+            line.textureScale = Vector2.one * 66.6667f;
+
+            var compensator = lineGo.AddComponent<LineWidthCompensator>();
+            compensator.referenceDistance = 2.5f;
+
+            InvokeStart(compensator);
+            InvokeLateUpdate(compensator);
+
+            Assert.That(line.startWidth, Is.EqualTo(0.001f).Within(0.0001f));
+            Assert.That(line.textureScale.x, Is.EqualTo(33.3333f).Within(0.01f));
+        }
+
+        [Test]
+        public void LineWidthCompensator_ScalesDashTextureWithOrthographicZoom()
+        {
+            root = new GameObject("OrthographicDashScaleRoot");
+            var cameraGo = new GameObject("Main Camera");
+            cameraGo.transform.SetParent(root.transform, false);
+            cameraGo.tag = "MainCamera";
+            var camera = cameraGo.AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 2.5f;
+
+            var lineGo = new GameObject("LineHost");
+            lineGo.transform.SetParent(root.transform, false);
+            var line = lineGo.AddComponent<LineRenderer>();
+            line.startWidth = 0.0005f;
+            line.endWidth = 0.0005f;
+            line.textureScale = Vector2.one * 66.6667f;
+
+            var compensator = lineGo.AddComponent<LineWidthCompensator>();
+            compensator.referenceOrthographicSize = 1.25f;
+
+            InvokeStart(compensator);
+            InvokeLateUpdate(compensator);
+
+            Assert.That(line.startWidth, Is.EqualTo(0.001f).Within(0.0001f));
+            Assert.That(line.textureScale.x, Is.EqualTo(33.3333f).Within(0.01f));
+        }
+
         static ReferenceLineVisibility CreateTestVisibility(GameObject host)
         {
             var visibility = host.AddComponent<ReferenceLineVisibility>();
@@ -344,6 +524,20 @@ namespace PoolAimTrainer.Tests.EditMode
         static void InvokeAwake(MonoBehaviour behaviour)
         {
             var method = behaviour.GetType().GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+            method.Invoke(behaviour, null);
+        }
+
+        static void InvokeStart(MonoBehaviour behaviour)
+        {
+            var method = behaviour.GetType().GetMethod("Start", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+            method.Invoke(behaviour, null);
+        }
+
+        static void InvokeLateUpdate(MonoBehaviour behaviour)
+        {
+            var method = behaviour.GetType().GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(method, Is.Not.Null);
             method.Invoke(behaviour, null);
         }

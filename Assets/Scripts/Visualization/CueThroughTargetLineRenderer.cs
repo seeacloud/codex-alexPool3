@@ -11,12 +11,13 @@ namespace PoolAimTrainer.Visualization
     public class CueThroughTargetLineRenderer : DashLine
     {
         [Tooltip("红色参考线颜色")]
-        public Color lineColor = new Color(1f, 0.2f, 0.2f, 1f);
+        public Color lineColor = new Color(1.8f, 0.12f, 0.65f, 1f);
 
         LineRenderer lr;
 
         void Awake()
         {
+            lineColor = new Color(1.8f, 0.12f, 0.65f, 1f);
             lineColor.a = 1f;
             lr = CreateDashLineRenderer("LR_CueThroughTarget", lineColor);
         }

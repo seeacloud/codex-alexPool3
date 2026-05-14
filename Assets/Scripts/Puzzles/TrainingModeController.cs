@@ -38,6 +38,7 @@ namespace PoolAimTrainer.Puzzles
             ReferenceVisualLayer.CueToGhost,
             ReferenceVisualLayer.ObjectToPocket,
             ReferenceVisualLayer.CueThroughTarget,
+            ReferenceVisualLayer.MirroredCueThroughTarget,
             ReferenceVisualLayer.TargetBallPath,
             ReferenceVisualLayer.ManualCuePath,
             ReferenceVisualLayer.EstimatedAimLine,
@@ -134,6 +135,8 @@ namespace PoolAimTrainer.Puzzles
         {
             WireDefaults();
             examState = mode == TrainingMode.Exam ? ExamState.Answering : ExamState.Inactive;
+            if (aimHud != null)
+                aimHud.ResetAimSelectionToDefault();
             if (resultLabel != null)
                 resultLabel.text = mode == TrainingMode.Exam ? "请瞄准后提交" : "";
             ApplyModeState();

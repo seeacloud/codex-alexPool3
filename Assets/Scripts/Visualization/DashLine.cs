@@ -5,12 +5,12 @@ namespace PoolAimTrainer.Visualization
     public abstract class DashLine : MonoBehaviour
     {
         [Tooltip("线宽（米）")]
-        public float lineWidth = 0.0005f;
+        public float lineWidth = 0.0008f;
 
         // Hard-coded dash style (not serialized) so all lines stay consistent
         // regardless of stale scene-serialized values.
-        const float dashLength = 0.01f;
-        const float gapLength = 0.005f;
+        const float dashLength = 0.03f;
+        const float gapLength = 0.015f;
 
         protected LineRenderer CreateDashLineRenderer(string name, Color color)
         {
@@ -31,23 +31,24 @@ namespace PoolAimTrainer.Visualization
             lr.textureMode = LineTextureMode.Tile;
             lr.textureScale = new Vector2(1f / (dashLength + gapLength), 1f);
             var mat = new Material(Shader.Find("Sprites/Default"));
-            mat.mainTexture = MakeDashTexture(color);
-            mat.color = Color.white;
+            mat.mainTexture = MakeDashTexture();
+            mat.color = color;
             lr.sharedMaterial = mat;
+            if (lr.GetComponent<LineWidthCompensator>() == null)
+                lr.gameObject.AddComponent<LineWidthCompensator>();
             lr.enabled = false;
             return lr;
         }
 
-        Texture2D MakeDashTexture(Color color)
+        Texture2D MakeDashTexture()
         {
             int totalPx = 32;
             int dashPx = Mathf.RoundToInt((dashLength / (dashLength + gapLength)) * totalPx);
             var tex = new Texture2D(totalPx, 1, TextureFormat.RGBA32, false);
             tex.wrapMode = TextureWrapMode.Repeat;
             tex.filterMode = FilterMode.Point;
-            Color solid = new Color(color.r, color.g, color.b, 1f);
             for (int x = 0; x < totalPx; x++)
-                tex.SetPixel(x, 0, x < dashPx ? solid : Color.clear);
+                tex.SetPixel(x, 0, x < dashPx ? Color.white : Color.clear);
             tex.Apply();
             return tex;
         }

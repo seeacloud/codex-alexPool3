@@ -82,6 +82,7 @@ namespace PoolAimTrainer.UI
                 if (aimManager.pathRenderer != null) aimManager.pathRenderer.Hide();
                 if (aimManager.cuePathRenderer != null) aimManager.cuePathRenderer.Hide();
                 if (aimManager.cueThroughTargetRenderer != null) aimManager.cueThroughTargetRenderer.Hide();
+                if (aimManager.mirroredCueThroughRenderer != null) aimManager.mirroredCueThroughRenderer.Hide();
                 if (aimManager.estimatedAimLineRenderer != null) aimManager.estimatedAimLineRenderer.Hide();
                 if (aimManager.cutAngleArcRenderer != null) aimManager.cutAngleArcRenderer.Hide();
                 if (aimManager.aimVsTargetArcRenderer != null) aimManager.aimVsTargetArcRenderer.Hide();

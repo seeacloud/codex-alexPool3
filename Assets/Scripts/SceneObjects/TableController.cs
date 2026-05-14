@@ -5,9 +5,9 @@ namespace PoolAimTrainer.SceneObjects
 {
     public class TableController : MonoBehaviour
     {
-        [Tooltip("桌面可用矩形的一半长度（米），默认美标 8ft 桌内尺寸")]
+        [Tooltip("桌面库边鼻线的一半长度（米），球心撞库时会停在此线内侧一个球半径")]
         public float playfieldHalfLength = 1.12f;
-        [Tooltip("桌面可用矩形的一半宽度（米）")]
+        [Tooltip("桌面库边鼻线的一半宽度（米）")]
         public float playfieldHalfWidth = 0.56f;
         [Tooltip("球半径（米）")]
         public float ballRadius = 0.0286f;

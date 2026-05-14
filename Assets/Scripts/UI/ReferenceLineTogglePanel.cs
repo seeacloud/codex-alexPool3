@@ -12,7 +12,10 @@ namespace PoolAimTrainer.UI
         const string RightPanelObjectName = "RightPanel";
         const string RightPanelToggleButtonName = "RightPanelToggleButton";
         const string LegacyGhostButtonName = "BtnGhost";
+        const string PuzzleSectionObjectName = "PuzzleSection";
+        const string SectionTitleObjectName = "Title";
         const float RightPanelWidth = 330f;
+        const float HudImagePreferredHeight = 190f;
         const float RightPanelHorizontalPadding = 16f;
         const float HudInset = 32f;
         const float ToggleGridSpacing = 6f;
@@ -127,6 +130,12 @@ namespace PoolAimTrainer.UI
                 toggle.onValueChanged.AddListener(value => visibility.SetLayerVisible(captured, value));
                 layerToggles[captured] = toggle;
             }
+
+            if (embeddedInRightPanel)
+            {
+                EnsureCollapsibleSection(parent.Find(PuzzleSectionObjectName), "出题");
+                EnsureCollapsibleSection(panel, "参考线");
+            }
         }
 
         void CreateGhostToggle(Transform parent, float labelWidth)
@@ -171,6 +180,84 @@ namespace PoolAimTrainer.UI
             return gridGo.transform;
         }
 
+        static void EnsureCollapsibleSection(Transform section, string fallbackTitle)
+        {
+            if (section == null)
+                return;
+
+            Transform title = section.Find(SectionTitleObjectName);
+            if (title == null)
+            {
+                CreateHeader(section, fallbackTitle);
+                title = section.Find(SectionTitleObjectName);
+                if (title == null)
+                    return;
+                title.SetAsFirstSibling();
+            }
+
+            var label = title.GetComponent<TextMeshProUGUI>();
+            if (label == null)
+                return;
+
+            string titleText = NormalizeCollapsibleTitle(label.text);
+            if (string.IsNullOrWhiteSpace(titleText))
+                titleText = fallbackTitle;
+
+            label.raycastTarget = true;
+
+            var button = title.GetComponent<Button>() ?? title.gameObject.AddComponent<Button>();
+            button.targetGraphic = label;
+            button.transition = Selectable.Transition.ColorTint;
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() =>
+            {
+                bool shouldCollapse = HasVisibleSectionContent(section, title);
+                SetSectionCollapsed(section, title, titleText, shouldCollapse);
+            });
+
+            SetSectionCollapsed(section, title, titleText, false);
+        }
+
+        static bool HasVisibleSectionContent(Transform section, Transform title)
+        {
+            foreach (Transform child in section)
+            {
+                if (child != title && child.gameObject.activeSelf)
+                    return true;
+            }
+            return false;
+        }
+
+        static void SetSectionCollapsed(Transform section, Transform title, string titleText, bool collapsed)
+        {
+            foreach (Transform child in section)
+            {
+                if (child != title)
+                    child.gameObject.SetActive(!collapsed);
+            }
+
+            var label = title.GetComponent<TextMeshProUGUI>();
+            if (label != null)
+                label.text = (collapsed ? "> " : "v ") + titleText;
+        }
+
+        static string NormalizeCollapsibleTitle(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            text = text.Trim();
+            if (text.StartsWith("v "))
+                return text.Substring(2);
+            if (text.StartsWith("> "))
+                return text.Substring(2);
+            if (text.StartsWith("▼ "))
+                return text.Substring(2);
+            if (text.StartsWith("▶ "))
+                return text.Substring(2);
+            return text;
+        }
+
         static void ConfigureRightPanel(Transform rightPanel, Canvas canvas)
         {
             var rt = rightPanel.GetComponent<RectTransform>();
@@ -184,7 +271,7 @@ namespace PoolAimTrainer.UI
             if (hudImage != null)
             {
                 var hudLayout = hudImage.GetComponent<LayoutElement>() ?? hudImage.gameObject.AddComponent<LayoutElement>();
-                hudLayout.preferredHeight = RightPanelWidth - HudInset;
+                hudLayout.preferredHeight = HudImagePreferredHeight;
             }
 
             EnsureCollapseButton(rightPanel, canvas);
