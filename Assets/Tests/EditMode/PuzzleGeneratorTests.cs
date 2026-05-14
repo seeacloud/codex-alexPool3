@@ -91,13 +91,22 @@ namespace PoolAimTrainer.Tests.EditMode
             Assert.That(map, Is.Not.Null);
             Assert.That(random, Is.Not.Null);
             Assert.That(ui.pocketDropdown.gameObject.activeSelf, Is.False);
+            Assert.That(map.GetComponent<LayoutElement>().preferredWidth, Is.EqualTo(150f).Within(0.01f));
+            Assert.That(map.GetComponent<LayoutElement>().preferredHeight, Is.EqualTo(74f).Within(0.01f));
+            Assert.That(random.GetComponent<LayoutElement>().preferredWidth, Is.EqualTo(74f).Within(0.01f));
+            Assert.That(random.GetComponent<LayoutElement>().preferredHeight, Is.EqualTo(74f).Within(0.01f));
+            Assert.That(random.GetComponentInChildren<TextMeshProUGUI>().text, Is.EqualTo("随机袋"));
             Assert.That(map.Find("Pocket_4").GetComponent<RectTransform>().anchorMin.x, Is.EqualTo(0.94f).Within(0.001f));
             Assert.That(map.Find("Pocket_6").GetComponent<RectTransform>().anchorMin.x, Is.EqualTo(0.06f).Within(0.001f));
+            Assert.That(map.Find("RailTop").GetComponent<Image>().color, Is.EqualTo(Color.white));
+            Assert.That(map.Find("Pocket_1/MarkerVisual"), Is.Not.Null);
 
             var pocket4 = map.Find("Pocket_4").GetComponent<Button>();
             pocket4.onClick.Invoke();
 
             Assert.That(ui.pocketDropdown.value, Is.EqualTo(4));
+            Assert.That(map.Find("Pocket_4/MarkerVisual").GetComponent<Image>().color, Is.EqualTo(new Color(0.2f, 0.8f, 0.4f, 1f)));
+            Assert.That(map.Find("Pocket_1/MarkerVisual").GetComponent<Image>().color, Is.EqualTo(Color.white));
 
             random.GetComponent<Button>().onClick.Invoke();
 

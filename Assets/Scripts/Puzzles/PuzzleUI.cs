@@ -39,16 +39,18 @@ namespace PoolAimTrainer.Puzzles
 
         Color activeColor = new Color(0.2f, 0.8f, 0.4f, 1f);
         Color inactiveColor = new Color(0.3f, 0.3f, 0.3f, 0.8f);
-        Color pocketMapColor = new Color(0.09f, 0.28f, 0.14f, 1f);
-        Color pocketMarkerColor = new Color(1f, 0.35f, 0.38f, 1f);
+        Color pocketMapColor = new Color(0.04f, 0.22f, 0.10f, 1f);
+        Color pocketMarkerColor = Color.white;
         const float AngleButtonWidth = 46f;
         const float AngleButtonHeight = 26f;
         const float AngleButtonSpacing = 4f;
         const int AngleButtonColumns = 4;
         const float PocketMapWidth = 150f;
         const float PocketMapHeight = 74f;
-        const float PocketMapLineThickness = 3f;
+        const float PocketMapLineThickness = 2f;
         const float PocketMarkerSize = 24f;
+        static Sprite filledPocketSprite;
+        static Sprite ringPocketSprite;
         static readonly Vector2[] PocketMapAnchors =
         {
             new Vector2(0.06f, 0.82f),
@@ -471,20 +473,19 @@ namespace PoolAimTrainer.Puzzles
             hitImage.color = new Color(1f, 1f, 1f, 0f);
             hitImage.raycastTarget = true;
 
-            var textGo = new GameObject("Text", typeof(RectTransform));
-            textGo.transform.SetParent(go.transform, false);
-            var textRt = textGo.GetComponent<RectTransform>();
-            textRt.anchorMin = Vector2.zero;
-            textRt.anchorMax = Vector2.one;
-            textRt.offsetMin = Vector2.zero;
-            textRt.offsetMax = Vector2.zero;
+            var markerGo = new GameObject("MarkerVisual", typeof(RectTransform), typeof(Image));
+            markerGo.transform.SetParent(go.transform, false);
+            var markerRt = markerGo.GetComponent<RectTransform>();
+            markerRt.anchorMin = new Vector2(0.5f, 0.5f);
+            markerRt.anchorMax = new Vector2(0.5f, 0.5f);
+            markerRt.pivot = new Vector2(0.5f, 0.5f);
+            markerRt.anchoredPosition = Vector2.zero;
+            markerRt.sizeDelta = new Vector2(16f, 16f);
 
-            var text = textGo.AddComponent<TextMeshProUGUI>();
-            text.text = "○";
-            text.fontSize = 28f;
-            text.alignment = TextAlignmentOptions.Center;
-            text.color = pocketMarkerColor;
-            text.raycastTarget = false;
+            var markerImage = markerGo.GetComponent<Image>();
+            markerImage.sprite = GetPocketCircleSprite(false);
+            markerImage.color = pocketMarkerColor;
+            markerImage.raycastTarget = false;
 
             var button = go.GetComponent<UnityEngine.UI.Button>();
             button.targetGraphic = hitImage;
@@ -502,15 +503,17 @@ namespace PoolAimTrainer.Puzzles
 
             if (pocketRandomButton == null)
             {
-                pocketRandomButton = CreateTextButton(row, "PocketRandom", "Random", 13f);
-                var layout = pocketRandomButton.GetComponent<LayoutElement>();
-                if (layout != null)
-                {
-                    layout.preferredWidth = 74f;
-                    layout.preferredHeight = AngleButtonHeight;
-                    layout.flexibleWidth = 0f;
-                }
+                pocketRandomButton = CreateTextButton(row, "PocketRandom", "随机袋", 13f);
             }
+
+            var layout = pocketRandomButton.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredWidth = 74f;
+                layout.preferredHeight = PocketMapHeight;
+                layout.flexibleWidth = 0f;
+            }
+            SetButtonText(pocketRandomButton, "随机袋");
 
             pocketRandomButton.onClick.RemoveAllListeners();
             pocketRandomButton.onClick.AddListener(() => SetPocketIndex(0));
@@ -537,6 +540,16 @@ namespace PoolAimTrainer.Puzzles
             text.raycastTarget = false;
 
             return go.GetComponent<UnityEngine.UI.Button>();
+        }
+
+        static void SetButtonText(UnityEngine.UI.Button button, string labelText)
+        {
+            if (button == null)
+                return;
+
+            var label = button.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null)
+                label.text = labelText;
         }
 
         void UpdatePocketRowHeight(Transform row)
@@ -567,11 +580,12 @@ namespace PoolAimTrainer.Puzzles
             for (int i = 0; i < pocketButtons.Count; i++)
             {
                 bool active = selected == i + 1;
-                var text = pocketButtons[i].GetComponentInChildren<TextMeshProUGUI>();
-                if (text != null)
+                var marker = pocketButtons[i].transform.Find("MarkerVisual");
+                var image = marker != null ? marker.GetComponent<Image>() : null;
+                if (image != null)
                 {
-                    text.text = active ? "●" : "○";
-                    text.color = active ? activeColor : pocketMarkerColor;
+                    image.sprite = GetPocketCircleSprite(active);
+                    image.color = active ? activeColor : pocketMarkerColor;
                 }
             }
 
@@ -612,6 +626,53 @@ namespace PoolAimTrainer.Puzzles
             if (obj == null) return;
             if (Application.isPlaying) Destroy(obj);
             else DestroyImmediate(obj);
+        }
+
+        static Sprite GetPocketCircleSprite(bool filled)
+        {
+            if (filled && filledPocketSprite != null)
+                return filledPocketSprite;
+            if (!filled && ringPocketSprite != null)
+                return ringPocketSprite;
+
+            const int size = 32;
+            const float ringThickness = 3f;
+            var texture = new Texture2D(size, size, TextureFormat.ARGB32, false)
+            {
+                name = filled ? "PocketFilledDot" : "PocketRingDot",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+            float radius = size * 0.42f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(new Vector2(x, y), center);
+                    float edgeAlpha = Mathf.Clamp01(radius + 0.75f - distance);
+                    float alpha = filled
+                        ? edgeAlpha
+                        : Mathf.Clamp01(edgeAlpha * Mathf.Clamp01(distance - (radius - ringThickness) + 0.75f));
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            texture.Apply(false, true);
+
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+
+            if (filled)
+                filledPocketSprite = sprite;
+            else
+                ringPocketSprite = sprite;
+            return sprite;
         }
 
         PuzzleParams BuildParams()
